@@ -1,15 +1,26 @@
 {
-  "name": "devflow-vscode",
-  "displayName": "Devflow",
+  "name": "diffmint-vscode",
+  "displayName": "Diffmint",
   "version": "0.1.0",
   "private": true,
+  "description": "Policy-driven local-first code review in VS Code through the Diffmint CLI.",
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "ai",
+    "cli",
+    "git",
+    "policy",
+    "review"
+  ],
+  "publisher": "diffmint",
   "main": "./dist/extension.js",
   "scripts": {
+    "clean": "rm -rf dist",
     "build": "tsc -p .",
-    "watch": "tsc -w -p ."
+    "watch": "tsc -w -p .",
+    "package": "pnpm build && pnpm dlx @vscode/vsce package --allow-missing-repository --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "22.10.2",
@@ -19,73 +30,146 @@
   "contributes": {
     "commands": [
       {
-        "command": "devflow.reviewCurrentChanges",
-        "title": "Devflow: Review Current Changes"
+        "command": "diffmint.reviewCurrentChanges",
+        "title": "Diffmint: Review Current Changes"
       },
       {
-        "command": "devflow.reviewStagedChanges",
-        "title": "Devflow: Review Staged Changes"
+        "command": "diffmint.reviewStagedChanges",
+        "title": "Diffmint: Review Staged Changes"
       },
       {
-        "command": "devflow.reviewSelectedFiles",
-        "title": "Devflow: Review Selected Files"
+        "command": "diffmint.reviewSelectedFiles",
+        "title": "Diffmint: Review Selected Files"
       },
       {
-        "command": "devflow.explainCurrentFile",
-        "title": "Devflow: Explain Current File"
+        "command": "diffmint.explainCurrentFile",
+        "title": "Diffmint: Explain Current File"
       },
       {
-        "command": "devflow.generateTests",
-        "title": "Devflow: Generate Tests for Current File"
+        "command": "diffmint.generateTests",
+        "title": "Diffmint: Generate Tests for Current File"
       },
       {
-        "command": "devflow.openHistory",
-        "title": "Devflow: Open Review History"
+        "command": "diffmint.openHistory",
+        "title": "Diffmint: Open Review History"
       },
       {
-        "command": "devflow.openTeamRules",
-        "title": "Devflow: Open Team Rules"
+        "command": "diffmint.openTeamRules",
+        "title": "Diffmint: Open Team Rules"
       },
       {
-        "command": "devflow.signIn",
-        "title": "Devflow: Sign In / Switch Workspace"
+        "command": "diffmint.openDashboard",
+        "title": "Diffmint: Open Dashboard"
+      },
+      {
+        "command": "diffmint.refreshViews",
+        "title": "Diffmint: Refresh Views"
+      },
+      {
+        "command": "diffmint.showLatestResult",
+        "title": "Diffmint: Show Latest Result"
+      },
+      {
+        "command": "diffmint.signIn",
+        "title": "Diffmint: Sign In / Switch Workspace"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "devflow",
-          "title": "Devflow",
-          "icon": "media/devflow.svg"
+          "id": "diffmint",
+          "title": "Diffmint",
+          "icon": "media/diffmint.svg"
         }
       ]
     },
     "views": {
-      "devflow": [
+      "diffmint": [
         {
-          "id": "devflow.results",
+          "id": "diffmint.results",
           "name": "Review Results"
         },
         {
-          "id": "devflow.history",
+          "id": "diffmint.history",
           "name": "History"
         },
         {
-          "id": "devflow.workspace",
+          "id": "diffmint.workspace",
           "name": "Workspace"
         }
       ]
+    },
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "diffmint.reviewSelectedFiles",
+          "when": "resourceScheme == file",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "diffmint.reviewSelectedFiles",
+          "when": "resourceScheme == file",
+          "group": "navigation"
+        },
+        {
+          "command": "diffmint.explainCurrentFile",
+          "when": "resourceScheme == file",
+          "group": "navigation"
+        },
+        {
+          "command": "diffmint.generateTests",
+          "when": "resourceScheme == file",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "diffmint.refreshViews",
+          "when": "view == diffmint.results",
+          "group": "navigation"
+        },
+        {
+          "command": "diffmint.refreshViews",
+          "when": "view == diffmint.history",
+          "group": "navigation"
+        },
+        {
+          "command": "diffmint.refreshViews",
+          "when": "view == diffmint.workspace",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Diffmint",
+      "properties": {
+        "diffmint.cliPath": {
+          "type": "string",
+          "default": "dm",
+          "description": "Path to the `dm` CLI binary used by the Diffmint extension."
+        },
+        "diffmint.webBaseUrl": {
+          "type": "string",
+          "default": "https://diffmint.io",
+          "description": "Base URL for the Diffmint web control plane."
+        }
+      }
     }
   },
   "activationEvents": [
-    "onCommand:devflow.explainCurrentFile",
-    "onCommand:devflow.generateTests",
-    "onCommand:devflow.openHistory",
-    "onCommand:devflow.openTeamRules",
-    "onCommand:devflow.reviewCurrentChanges",
-    "onCommand:devflow.reviewSelectedFiles",
-    "onCommand:devflow.reviewStagedChanges",
-    "onCommand:devflow.signIn"
+    "onCommand:diffmint.explainCurrentFile",
+    "onCommand:diffmint.generateTests",
+    "onCommand:diffmint.openDashboard",
+    "onCommand:diffmint.openHistory",
+    "onCommand:diffmint.openTeamRules",
+    "onCommand:diffmint.refreshViews",
+    "onCommand:diffmint.reviewCurrentChanges",
+    "onCommand:diffmint.reviewSelectedFiles",
+    "onCommand:diffmint.reviewStagedChanges",
+    "onCommand:diffmint.showLatestResult",
+    "onCommand:diffmint.signIn"
   ],
   "engines": {
     "vscode": "^1.95.0"

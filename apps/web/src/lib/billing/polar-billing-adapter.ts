@@ -39,7 +39,7 @@ export class PolarBillingAdapter implements BillingAdapter {
     const config = getPolarConfig();
     const configured = isPolarConfigured(config);
     const portalUrl = buildPolarPortalUrl(
-      context.polarCustomerId ?? 'cus_devflow_core',
+      context.polarCustomerId ?? 'cus_diffmint_core',
       config.appUrl
     );
     const planKey = context.planKey ?? 'team';
@@ -56,7 +56,7 @@ export class PolarBillingAdapter implements BillingAdapter {
       creditsIncluded: context.creditsIncluded ?? 200000,
       creditsRemaining: context.creditsRemaining ?? 156000,
       spendCapUsd: context.spendCapUsd ?? 500,
-      polarCustomerId: context.polarCustomerId ?? 'cus_devflow_core',
+      polarCustomerId: context.polarCustomerId ?? 'cus_diffmint_core',
       portalUrl,
       checkoutTargets: checkoutCatalog.map((plan) => ({
         ...plan,

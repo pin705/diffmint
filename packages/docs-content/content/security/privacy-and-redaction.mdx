@@ -21,6 +21,7 @@ related:
 - no full-repo upload by default
 - selected artifact sync only
 - explicit workspace-level cloud sync controls
+- baseline web security headers on pages and APIs
 
 ## Admin controls
 
@@ -28,7 +29,12 @@ related:
 - require redaction before sync
 - restrict allowed providers and models
 - configure retention windows for audit history
+- require persistent storage in production to avoid in-memory fallback during outages
 
 ## Developer expectations
 
 Always assume policy metadata, trace IDs, and selected findings may sync when cloud history is enabled.
+
+Before synced review history leaves the local machine, Diffmint redacts common secret formats such
+as bearer tokens, API keys, and secret-style assignments. Raw provider output is kept local by
+default and replaced with a redacted placeholder in synced artifacts.

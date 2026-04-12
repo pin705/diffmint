@@ -3,7 +3,7 @@ import type {
   PolicyBundle,
   PolicyChecklistItem,
   PolicyRule
-} from '@devflow/contracts';
+} from '@diffmint/contracts';
 
 const severityRank: FindingSeverity[] = ['low', 'medium', 'high', 'critical'];
 
@@ -68,11 +68,11 @@ export function createDefaultPolicyBundle(workspaceId: string): PolicyBundle {
 
   return {
     workspaceId,
-    policySetId: 'core-devflow',
-    policyVersionId: 'core-devflow-v1',
-    name: 'Devflow Core Rules',
+    policySetId: 'core-diffmint',
+    policyVersionId: 'core-diffmint-v1',
+    name: 'Diffmint Core Rules',
     version: '1.0.0',
-    checksum: 'core-devflow-v1',
+    checksum: 'core-diffmint-v1',
     publishedAt: new Date().toISOString(),
     summary: 'Secure, local-first review defaults for team-governed code review.',
     checklist,

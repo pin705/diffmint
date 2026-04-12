@@ -13,7 +13,7 @@ related:
 
 # Release Channels
 
-Devflow should publish coordinated release metadata for both the CLI and VS Code extension.
+Diffmint should publish coordinated release metadata for both the CLI and VS Code extension.
 
 ## Channels
 
@@ -22,3 +22,12 @@ Devflow should publish coordinated release metadata for both the CLI and VS Code
 - `canary` for internal testing and fast feedback
 
 Each release manifest should include version, checksum, download target, and changelog URL.
+
+For production rollouts, Diffmint can also sign release manifests before returning them from the
+client API. When `DIFFMINT_RELEASE_SIGNING_PRIVATE_KEY` is configured, manifests include a stable
+`signature` envelope with:
+
+- `algorithm` set to `ed25519`
+- `keyId` for key rotation and rollout tracking
+- `signedAt` anchored to the manifest release timestamp
+- `value` as the base64 signature over the canonical manifest payload

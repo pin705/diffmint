@@ -10,7 +10,12 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import type { PolicyBundle, ProviderConfigSummary, ReviewSession } from '@devflow/contracts';
+import type {
+  ClientInstallation,
+  PolicyBundle,
+  ProviderConfigSummary,
+  ReviewSession
+} from '@diffmint/contracts';
 import type { OverviewStat } from '../server/service';
 
 interface ControlPlaneOverviewPageProps {
@@ -18,13 +23,15 @@ interface ControlPlaneOverviewPageProps {
   policyBundles: PolicyBundle[];
   providerSummaries: ProviderConfigSummary[];
   reviewSessions: ReviewSession[];
+  clientInstallations: ClientInstallation[];
 }
 
 export function ControlPlaneOverviewPage({
   overviewStats,
   policyBundles,
   providerSummaries,
-  reviewSessions
+  reviewSessions,
+  clientInstallations
 }: ControlPlaneOverviewPageProps) {
   return (
     <div className='space-y-6'>
@@ -77,28 +84,63 @@ export function ControlPlaneOverviewPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Docs-first rollout</CardTitle>
-            <CardDescription>
-              The docs package should unlock self-serve onboarding for both developers and admins.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            <div className='rounded-2xl border px-4 py-3 text-sm'>
-              Quickstart, install guides, admin setup, privacy, troubleshooting, and release
-              channels are now part of the product surface.
-            </div>
-            <div className='flex flex-wrap gap-2'>
-              <Button asChild>
-                <Link href='/dashboard/docs'>Open Docs Center</Link>
-              </Button>
-              <Button variant='outline' asChild>
-                <Link href='/docs/getting-started/5-minute-quickstart'>Open Public Docs</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className='space-y-4'>
+          <Card>
+            <CardHeader>
+              <CardTitle>Docs-first rollout</CardTitle>
+              <CardDescription>
+                The docs package should unlock self-serve onboarding for both developers and admins.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-3'>
+              <div className='rounded-2xl border px-4 py-3 text-sm'>
+                Quickstart, install guides, admin setup, privacy, troubleshooting, and release
+                channels are now part of the product surface.
+              </div>
+              <div className='flex flex-wrap gap-2'>
+                <Button asChild>
+                  <Link href='/dashboard/docs'>Open Docs Center</Link>
+                </Button>
+                <Button variant='outline' asChild>
+                  <Link href='/docs/getting-started/5-minute-quickstart'>Open Public Docs</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Connected clients</CardTitle>
+              <CardDescription>
+                Recent CLI and VS Code installations help release tracking and support triage.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-3'>
+              {clientInstallations.length === 0 ? (
+                <div className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'>
+                  No client installations have synced yet. The first successful CLI or VS Code
+                  sign-in will register a client version here.
+                </div>
+              ) : (
+                clientInstallations.slice(0, 5).map((installation) => (
+                  <div
+                    key={installation.id}
+                    className='flex items-center justify-between gap-3 rounded-2xl border px-4 py-3'
+                  >
+                    <div>
+                      <p className='font-medium'>
+                        {installation.clientType === 'cli' ? 'CLI' : 'VS Code'}{' '}
+                        {installation.version}
+                      </p>
+                      <p className='text-muted-foreground text-sm'>{installation.platform}</p>
+                    </div>
+                    <Badge variant='outline'>{installation.channel}</Badge>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className='grid gap-4 lg:grid-cols-2'>
@@ -130,7 +172,7 @@ export function ControlPlaneOverviewPage({
           <CardHeader>
             <CardTitle>Policy posture</CardTitle>
             <CardDescription>
-              Policy versioning is what makes Devflow different from a generic code assistant.
+              Policy versioning is what makes Diffmint different from a generic code assistant.
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-3'>

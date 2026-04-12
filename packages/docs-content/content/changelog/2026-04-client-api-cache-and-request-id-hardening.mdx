@@ -1,0 +1,19 @@
+---
+title: Client API Cache And Request ID Hardening
+description: Sensitive client API responses now disable caching and emit request ids for support and tracing.
+section: Changelog
+order: 202604131320
+surfaces:
+  - cli
+  - web
+  - admin
+related:
+  - /docs/troubleshooting/auth-and-doctor
+---
+
+# Client API Cache And Request ID Hardening
+
+- sensitive client API responses now return `private, no-store` cache headers and vary on device auth headers
+- public release manifests now use a short public cache policy
+- client API responses now emit `x-diffmint-request-id` for tracing and support
+- CLI error messages now include the request id when the control plane returns one

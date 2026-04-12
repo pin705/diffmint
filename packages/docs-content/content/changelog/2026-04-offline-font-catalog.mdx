@@ -1,0 +1,16 @@
+---
+title: Offline font catalog
+description: The web app now uses an offline font catalog for theme typography so production builds do not require Google Fonts access.
+section: Changelog
+order: 120
+surfaces:
+  - web
+related:
+  - /docs/getting-started/docker-development
+---
+
+# Offline font catalog
+
+- Theme typography now resolves from a local offline font catalog instead of `next/font/google`.
+- Production builds no longer depend on external font downloads.
+- Theme-specific font tokens stay intact, so the existing visual language is preserved.

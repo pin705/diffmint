@@ -1,5 +1,5 @@
 {
-  "name": "@devflow/policy-engine",
+  "name": "@diffmint/policy-engine",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,6 +7,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@devflow/contracts": "workspace:*"
+    "@diffmint/contracts": "workspace:*"
   }
 }

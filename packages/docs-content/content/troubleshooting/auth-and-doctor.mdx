@@ -17,17 +17,20 @@ related:
 ## Common checks
 
 ```bash
-devflow auth login
-devflow doctor
-devflow review --staged
+dm auth login
+dm doctor
+dm review --staged
 ```
 
 ## If login fails
 
 - confirm the browser reached the device approval page
+- confirm the correct workspace is active before you approve the device
 - confirm the device session was explicitly approved
 - confirm the workspace was selected
 - confirm the control plane URL is correct
+- confirm the device approval link uses the expected public hostname when running behind a proxy
+- capture the `request id` from the API error when you need support for a failed login or sync call
 
 ## If the review is empty
 
@@ -37,4 +40,18 @@ devflow review --staged
 
 ## If Qwen is missing
 
-`devflow doctor` should report a warning and keep the CLI in scaffold mode until Qwen Code is installed.
+`dm doctor` should report a warning and keep the CLI in scaffold mode until Qwen Code is installed.
+
+## If you need to force scaffold mode
+
+Use this when you want deterministic local runs or CI checks without calling the live model:
+
+```bash
+DIFFMINT_REVIEW_RUNTIME=scaffold dm review --base origin/main
+```
+
+## If review sync is delayed
+
+- run `dm doctor` and check the `Sync queue` line
+- keep working locally; queued review artifacts are preserved in the local Diffmint home directory
+- run a workspace-connected command like `dm history` after the control plane is back to flush the queue

@@ -11,11 +11,11 @@ const installCards = [
   {
     title: 'CLI',
     description:
-      'Use Devflow from the terminal for login, review, explain, tests, history, and doctor.',
+      'Use Diffmint from the terminal for login, review, explain, tests, history, and doctor.',
     steps: [
       'Run `pnpm install`',
-      'Run `devflow auth login` and approve the device in your browser',
-      'Run `devflow doctor`'
+      'Run `dm auth login` and approve the device in your browser',
+      'Run `dm doctor`'
     ]
   },
   {
@@ -35,7 +35,7 @@ export default function InstallPage() {
     <main className='mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-12'>
       <div className='max-w-3xl space-y-4'>
         <p className='text-primary text-sm font-medium uppercase tracking-[0.24em]'>Install</p>
-        <h1 className='text-4xl font-semibold tracking-tight'>Set up Devflow end to end.</h1>
+        <h1 className='text-4xl font-semibold tracking-tight'>Set up Diffmint end to end.</h1>
         <p className='text-muted-foreground text-lg'>
           Start with the CLI, add the VS Code extension, then finish the workspace rollout from the
           control plane.

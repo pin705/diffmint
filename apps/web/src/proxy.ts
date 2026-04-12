@@ -1,12 +1,22 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
+import { isClerkEnabled } from '@/lib/clerk/flags';
 
 const isDashboardRoute = createRouteMatcher(['/dashboard(.*)']);
 
-export default clerkMiddleware(async (auth, request) => {
+const clerkProxy = clerkMiddleware(async (auth, request) => {
   if (isDashboardRoute(request)) {
     await auth.protect();
   }
 });
+
+export default function proxy(...args: Parameters<typeof clerkProxy>) {
+  if (!isClerkEnabled()) {
+    return NextResponse.next();
+  }
+
+  return clerkProxy(...args);
+}
 
 export const config = {
   matcher: [

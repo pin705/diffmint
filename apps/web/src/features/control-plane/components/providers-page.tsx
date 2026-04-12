@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import type { ProviderConfigSummary } from '@devflow/contracts';
+import type { ProviderConfigSummary } from '@diffmint/contracts';
 
 interface ProvidersPageContentProps {
   providerSummaries: ProviderConfigSummary[];
@@ -24,7 +24,7 @@ export function ProvidersPageContent({ providerSummaries }: ProvidersPageContent
               <CardTitle className='capitalize'>{provider.provider}</CardTitle>
               <CardDescription>
                 {provider.mode === 'managed'
-                  ? 'Managed by the Devflow platform'
+                  ? 'Managed by the Diffmint platform'
                   : 'Workspace-supplied provider credentials'}
               </CardDescription>
             </CardHeader>

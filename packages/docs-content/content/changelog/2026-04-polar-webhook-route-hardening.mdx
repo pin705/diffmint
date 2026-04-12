@@ -1,0 +1,17 @@
+---
+title: Polar Webhook Route Hardening
+description: Polar webhook ingress now enforces signature headers, payload size limits, and request ids.
+section: Changelog
+order: 202604131520
+surfaces:
+  - web
+  - admin
+related:
+  - /docs/admin/billing-with-polar
+---
+
+# Polar Webhook Route Hardening
+
+- `/api/polar/webhooks` now rejects requests that do not include the expected signed Polar webhook headers
+- oversized webhook deliveries are rejected before they reach the Polar adapter
+- every webhook response now includes a request id and `no-store` cache headers for support and traceability

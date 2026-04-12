@@ -1,4 +1,4 @@
-import type { DeviceAuthSession } from '@devflow/contracts';
+import type { DeviceAuthSession } from '@diffmint/contracts';
 import Link from 'next/link';
 import { approveDeviceAuthAction, revokeDeviceAuthAction } from '@/app/auth/device/actions';
 import { Icons } from '@/components/icons';
@@ -17,6 +17,8 @@ interface DeviceApprovalPageProps {
   deviceCode?: string;
   session: DeviceAuthSession | null;
   status?: string;
+  hasActiveWorkspace?: boolean;
+  workspaceSelectionHref?: string;
 }
 
 function renderStatusVariant(status?: string): 'default' | 'secondary' | 'destructive' | 'outline' {
@@ -51,7 +53,13 @@ function renderStatusLabel(status?: string): string {
   }
 }
 
-export function DeviceApprovalPage({ deviceCode, session, status }: DeviceApprovalPageProps) {
+export function DeviceApprovalPage({
+  deviceCode,
+  session,
+  status,
+  hasActiveWorkspace = false,
+  workspaceSelectionHref = '/dashboard/workspaces'
+}: DeviceApprovalPageProps) {
   const effectiveStatus = session?.status ?? status;
   const badgeVariant = renderStatusVariant(effectiveStatus);
 
@@ -62,8 +70,8 @@ export function DeviceApprovalPage({ deviceCode, session, status }: DeviceApprov
           <CardHeader>
             <CardTitle>Device approval</CardTitle>
             <CardDescription>
-              Open this page from `devflow auth login` so you can approve a CLI session for the
-              current workspace.
+              Open this page from `dm auth login` so you can approve a CLI session for the current
+              workspace.
             </CardDescription>
           </CardHeader>
           <CardFooter className='gap-3'>
@@ -125,8 +133,8 @@ export function DeviceApprovalPage({ deviceCode, session, status }: DeviceApprov
               <div className='space-y-1'>
                 <p className='font-medium'>Device approved</p>
                 <p className='text-muted-foreground'>
-                  Return to the terminal. `devflow auth login` should continue automatically on the
-                  next poll.
+                  Return to the terminal. `dm auth login` should continue automatically on the next
+                  poll.
                 </p>
               </div>
             </div>
@@ -145,6 +153,19 @@ export function DeviceApprovalPage({ deviceCode, session, status }: DeviceApprov
             </div>
           ) : null}
 
+          {!hasActiveWorkspace && effectiveStatus === 'pending' ? (
+            <div className='flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4'>
+              <Icons.workspace className='mt-0.5 h-4 w-4 text-amber-600' />
+              <div className='space-y-1'>
+                <p className='font-medium'>Select an active workspace first</p>
+                <p className='text-muted-foreground'>
+                  Diffmint will approve this device against your current organization. Choose or
+                  create a workspace before continuing.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           {effectiveStatus === 'revoked' ||
           effectiveStatus === 'expired' ||
           effectiveStatus === 'missing' ? (
@@ -153,7 +174,7 @@ export function DeviceApprovalPage({ deviceCode, session, status }: DeviceApprov
               <div className='space-y-1'>
                 <p className='font-medium'>This device session can no longer be used</p>
                 <p className='text-muted-foreground'>
-                  Start a fresh `devflow auth login` from the terminal to request a new device code.
+                  Start a fresh `dm auth login` from the terminal to request a new device code.
                 </p>
               </div>
             </div>
@@ -162,10 +183,16 @@ export function DeviceApprovalPage({ deviceCode, session, status }: DeviceApprov
         <CardFooter className='flex flex-wrap gap-3'>
           {effectiveStatus === 'pending' ? (
             <>
-              <form action={approveDeviceAuthAction}>
-                <input type='hidden' name='deviceCode' value={deviceCode} />
-                <Button type='submit'>Approve device</Button>
-              </form>
+              {hasActiveWorkspace ? (
+                <form action={approveDeviceAuthAction}>
+                  <input type='hidden' name='deviceCode' value={deviceCode} />
+                  <Button type='submit'>Approve device</Button>
+                </form>
+              ) : (
+                <Button asChild>
+                  <Link href={workspaceSelectionHref}>Choose workspace</Link>
+                </Button>
+              )}
               <form action={revokeDeviceAuthAction}>
                 <input type='hidden' name='deviceCode' value={deviceCode} />
                 <Button type='submit' variant='outline'>

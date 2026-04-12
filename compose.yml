@@ -14,12 +14,22 @@ services:
       NEXT_PUBLIC_SENTRY_DISABLED: "true"
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
-      DATABASE_URL: postgres://devflow:devflow@postgres:5432/devflow
+      DATABASE_URL: postgres://diffmint:diffmint@postgres:5432/diffmint
     ports:
       - "3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/api/health/ready').then((response)=>process.exit(response.ok?0:1)).catch(()=>process.exit(1))\""
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     volumes:
       - .:/workspace
       - pnpm-store:/pnpm/store
@@ -29,11 +39,11 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: devflow
-      POSTGRES_USER: devflow
-      POSTGRES_PASSWORD: devflow
+      POSTGRES_DB: diffmint
+      POSTGRES_USER: diffmint
+      POSTGRES_PASSWORD: diffmint
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U devflow -d devflow"]
+      test: ["CMD-SHELL", "pg_isready -U diffmint -d diffmint"]
       interval: 5s
       timeout: 5s
       retries: 10

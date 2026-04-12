@@ -17,11 +17,13 @@ export default defineConfig({
     trace: 'on-first-retry'
   },
   webServer: {
-    command: `pnpm --dir apps/web dev --hostname 127.0.0.1 --port ${port}`,
+    command: `pnpm --dir apps/web exec next start --hostname 127.0.0.1 --port ${port}`,
     url: baseURL,
-    timeout: 180_000,
-    reuseExistingServer: !process.env.CI,
+    timeout: 240_000,
+    reuseExistingServer: false,
     env: {
+      DIFFMINT_DISABLE_CLERK: 'true',
+      NEXT_PUBLIC_DIFFMINT_DISABLE_CLERK: 'true',
       NEXT_TELEMETRY_DISABLED: '1',
       NEXT_PUBLIC_SENTRY_DISABLED: 'true'
     }

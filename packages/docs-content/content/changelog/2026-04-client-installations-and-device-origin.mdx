@@ -1,0 +1,19 @@
+---
+title: Client installations and device origin hardening
+description: Diffmint now registers CLI installations in the control plane and builds device approval URLs from the incoming request origin.
+section: Changelog
+order: 130
+surfaces:
+  - cli
+  - web
+  - admin
+related:
+  - /docs/cli/reference
+  - /docs/troubleshooting/auth-and-doctor
+---
+
+# Client installations and device origin hardening
+
+- `dm auth login` now registers the CLI version, platform, and release channel with the control plane.
+- Workspace overview now shows recently connected clients using the existing dashboard theme components.
+- Device approval links now use forwarded host and protocol headers when present, which keeps browser login URLs correct behind reverse proxies and non-local environments.

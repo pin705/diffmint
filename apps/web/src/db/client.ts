@@ -6,7 +6,7 @@ const connectionString = process.env.DATABASE_URL;
 
 declare global {
   // eslint-disable-next-line no-var
-  var __devflowDb: ReturnType<typeof drizzle<typeof schema>> | null | undefined;
+  var __diffmintDb: ReturnType<typeof drizzle<typeof schema>> | null | undefined;
 }
 
 export function getDb() {
@@ -14,13 +14,13 @@ export function getDb() {
     return null;
   }
 
-  if (!globalThis.__devflowDb) {
+  if (!globalThis.__diffmintDb) {
     const client = postgres(connectionString, {
       prepare: false
     });
 
-    globalThis.__devflowDb = drizzle(client, { schema });
+    globalThis.__diffmintDb = drizzle(client, { schema });
   }
 
-  return globalThis.__devflowDb;
+  return globalThis.__diffmintDb;
 }

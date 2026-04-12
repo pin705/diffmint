@@ -1,16 +1,16 @@
 {
-  "name": "@devflow/cli",
+  "name": "@diffmint/cli",
   "version": "0.1.0",
   "private": true,
   "bin": {
-    "devflow": "./bin/devflow"
+    "dm": "./bin/dm"
   },
   "type": "module",
   "scripts": {
     "dev": "node --import tsx src/index.ts --help"
   },
   "dependencies": {
-    "@devflow/contracts": "workspace:*",
-    "@devflow/review-core": "workspace:*"
+    "@diffmint/contracts": "workspace:*",
+    "@diffmint/review-core": "workspace:*"
   }
 }

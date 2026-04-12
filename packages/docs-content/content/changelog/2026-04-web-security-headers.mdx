@@ -1,0 +1,16 @@
+---
+title: Web Security Headers
+description: Added baseline browser security headers across the Diffmint web surface.
+section: Changelog
+order: 202604131700
+surfaces:
+  - web
+related:
+  - /docs/security/privacy-and-redaction
+---
+
+# Web Security Headers
+
+- pages and APIs now emit baseline browser security headers including `X-Frame-Options`, `Referrer-Policy`, and `Permissions-Policy`
+- `Cross-Origin-Opener-Policy` is set to `same-origin-allow-popups` to stay compatible with auth popup flows
+- `Strict-Transport-Security` is enabled in production and can be forced with `DIFFMINT_ENABLE_HSTS=true`

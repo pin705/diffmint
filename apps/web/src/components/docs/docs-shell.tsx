@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import type { DocsNavGroup } from '@devflow/docs-content';
+import type { DocsNavGroup } from '@diffmint/docs-content';
 import type { ReactNode } from 'react';
 
 interface DocsShellProps {

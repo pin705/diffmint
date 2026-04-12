@@ -1,5 +1,5 @@
-import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
+import { getServerAuthContext } from '@/lib/clerk/server-auth';
 import { getDashboardRedirectTarget } from './access-rules';
 
 export interface DashboardAccessContext {
@@ -16,7 +16,7 @@ interface DashboardAccessOptions {
 export async function requireDashboardAccess(
   options: DashboardAccessOptions = {}
 ): Promise<DashboardAccessContext> {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await getServerAuthContext();
   const normalizedUserId = userId ?? null;
   const normalizedOrgId = orgId ?? null;
   const redirectTarget = getDashboardRedirectTarget({

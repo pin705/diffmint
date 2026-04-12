@@ -1,7 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@diffmint/contracts": ["../../packages/contracts/src/index.ts"],
+      "@diffmint/policy-engine": ["../../packages/policy-engine/src/index.ts"],
+      "@diffmint/review-core": ["../../packages/review-core/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }

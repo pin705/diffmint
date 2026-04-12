@@ -31,4 +31,11 @@ related:
 - Copy suggested fixes
 - Open the full report in the web app
 
-The extension should never become a second review engine. It delegates execution to the local `devflow` CLI.
+## Extension runtime
+
+- The extension shells out to the local `dm` binary instead of embedding a second review engine.
+- `diffmint.cliPath` lets teams pin a custom CLI path when they manage installs outside the system PATH.
+- `diffmint.webBaseUrl` controls where dashboard, team rules, and sign-in links open.
+- The activity-bar views read local Diffmint config and history so workspace and recent review state stay visible without leaving VS Code.
+
+The extension should never become a second review engine. It delegates execution to the local `dm` CLI.

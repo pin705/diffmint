@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -12,6 +13,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "incremental": true
+    "incremental": true,
+    "paths": {
+      "@diffmint/contracts": ["packages/contracts/src/index.ts"],
+      "@diffmint/docs-content": ["packages/docs-content/src/index.ts"],
+      "@diffmint/policy-engine": ["packages/policy-engine/src/index.ts"],
+      "@diffmint/review-core": ["packages/review-core/src/index.ts"]
+    }
   }
 }

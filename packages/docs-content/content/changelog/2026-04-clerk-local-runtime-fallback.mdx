@@ -1,0 +1,16 @@
+---
+title: Clerk local runtime fallback
+description: Public routes and docs can now render locally without Clerk keys while protected auth flows still require Clerk configuration.
+section: Changelog
+order: 130
+surfaces:
+  - web
+related:
+  - /docs/getting-started/5-minute-quickstart
+---
+
+# Clerk local runtime fallback
+
+- Public routes, docs, and install flows now render locally even when Clerk keys are not configured.
+- Protected auth flows still require real Clerk credentials and show a clear fallback notice when missing.
+- This keeps local production-style smoke tests from hanging on optional auth setup.

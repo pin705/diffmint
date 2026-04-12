@@ -1,9 +1,21 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs';
+import { isSentryBuildEnabled } from './src/lib/sentry/flags';
+import { getSentryWebpackAliases, getSentryWebpackIgnoreWarnings } from './src/lib/sentry/webpack';
+import { buildSecurityHeaders } from './security-headers';
 
 // Define the base Next.js configuration
 const baseConfig: NextConfig = {
   output: process.env.BUILD_STANDALONE === 'true' ? 'standalone' : undefined,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: buildSecurityHeaders()
+      }
+    ];
+  },
   images: {
     remotePatterns: [
       {
@@ -25,11 +37,24 @@ const baseConfig: NextConfig = {
   },
   transpilePackages: [
     'geist',
-    '@devflow/contracts',
-    '@devflow/docs-content',
-    '@devflow/policy-engine',
-    '@devflow/review-core'
+    '@diffmint/contracts',
+    '@diffmint/docs-content',
+    '@diffmint/policy-engine',
+    '@diffmint/review-core'
   ],
+  webpack(config) {
+    config.resolve ??= {};
+    config.resolve.alias = {
+      ...(config.resolve.alias ?? {}),
+      ...getSentryWebpackAliases(path.resolve(__dirname))
+    };
+    config.ignoreWarnings = [
+      ...(Array.isArray(config.ignoreWarnings) ? config.ignoreWarnings : []),
+      ...getSentryWebpackIgnoreWarnings()
+    ];
+
+    return config;
+  },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production'
   }
@@ -37,8 +62,8 @@ const baseConfig: NextConfig = {
 
 let configWithPlugins = baseConfig;
 
-// Conditionally enable Sentry configuration
-if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED) {
+// Only enable the Sentry build plugin when the optional integration is fully configured.
+if (isSentryBuildEnabled()) {
   configWithPlugins = withSentryConfig(configWithPlugins, {
     org: process.env.NEXT_PUBLIC_SENTRY_ORG,
     project: process.env.NEXT_PUBLIC_SENTRY_PROJECT,
@@ -64,9 +89,8 @@ if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED) {
       }
     },
 
-    // Disable source map upload when org/project are not configured
     sourcemaps: {
-      disable: !process.env.NEXT_PUBLIC_SENTRY_ORG || !process.env.NEXT_PUBLIC_SENTRY_PROJECT
+      disable: false
     }
   });
 }

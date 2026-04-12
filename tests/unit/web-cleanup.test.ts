@@ -7,7 +7,7 @@ import { navGroups } from '../../apps/web/src/config/nav-config.ts';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 describe('web cleanup', () => {
-  it('keeps only Devflow control-plane routes in primary navigation', () => {
+  it('keeps only Diffmint control-plane routes in primary navigation', () => {
     const urls = navGroups.flatMap((group) => group.items.map((item) => item.url));
 
     expect(urls).toEqual([
@@ -38,6 +38,8 @@ describe('web cleanup', () => {
       'apps/web/src/components/layout/cta-github.tsx',
       'apps/web/src/features/chat',
       'apps/web/src/features/forms',
+      'apps/web/src/features/auth/components/github-auth-button.tsx',
+      'apps/web/src/features/auth/components/user-auth-form.tsx',
       'apps/web/src/features/kanban',
       'apps/web/src/features/notifications',
       'apps/web/src/features/products',

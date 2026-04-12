@@ -26,9 +26,9 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className='text-foreground mb-3 text-xl font-semibold'>Introduction</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
-            These Terms govern access to Devflow, including the web control plane, CLI, VS Code
-            extension, and synced review services. By using Devflow, you agree to use the service in
-            accordance with your organization policies and applicable law.
+            These Terms govern access to Diffmint, including the web control plane, CLI, VS Code
+            extension, and synced review services. By using Diffmint, you agree to use the service
+            in accordance with your organization policies and applicable law.
           </p>
         </section>
 
@@ -36,7 +36,7 @@ export default function TermsOfServicePage() {
           <h2 className='text-foreground mb-3 text-xl font-semibold'>Acceptable use</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
             You are responsible for ensuring that code, policies, provider credentials, and review
-            outputs processed through Devflow comply with your internal security and privacy rules.
+            outputs processed through Diffmint comply with your internal security and privacy rules.
             Do not use the service to process content you are not authorized to analyze.
           </p>
         </section>
@@ -64,7 +64,7 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className='text-foreground mb-3 text-xl font-semibold'>Data and synced artifacts</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
-            Devflow may store synced review metadata and selected artifacts such as summaries,
+            Diffmint may store synced review metadata and selected artifacts such as summaries,
             findings, provider/model information, and audit events. Full repository upload is not
             required by default, but you remain responsible for what your workspace chooses to sync.
           </p>
@@ -83,7 +83,7 @@ export default function TermsOfServicePage() {
         <section className='border-border border-t pt-4'>
           <p className='text-muted-foreground text-center text-sm'>
             For workspace-specific legal, billing, or security requirements, maintain internal
-            guidance alongside the Devflow docs center.
+            guidance alongside the Diffmint docs center.
           </p>
         </section>
       </div>

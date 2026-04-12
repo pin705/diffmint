@@ -1,6 +1,6 @@
 ---
 title: Local-First Review
-description: Understand the default review posture and why Devflow keeps source context on the developer machine.
+description: Understand the default review posture and why Diffmint keeps source context on the developer machine.
 section: Concepts
 order: 10
 surfaces:
@@ -14,7 +14,7 @@ related:
 
 # Local-First Review
 
-Devflow reads git diffs and local files on the developer machine. The main workflow does not upload the full repository to the cloud.
+Diffmint reads git diffs and local files on the developer machine. The main workflow does not upload the full repository to the cloud.
 
 ## What stays local
 
@@ -31,5 +31,11 @@ Devflow reads git diffs and local files on the developer machine. The main workf
 - Selected report artifacts
 - Provider and model metadata
 - Trace IDs for audit
+
+If the control plane is offline, Diffmint keeps sync payloads in a local queue and flushes them
+automatically after the workspace reconnects.
+
+When cloud sync is enabled, Diffmint redacts common secret patterns before upload and omits raw
+provider output from synced artifacts by default.
 
 See [Privacy and redaction](/docs/security/privacy-and-redaction) for sync controls and default safeguards.

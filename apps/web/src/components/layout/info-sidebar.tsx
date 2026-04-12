@@ -16,7 +16,7 @@ import {
 
 // Default/fallback data when no content is set
 const defaultData = {
-  title: 'Devflow Docs',
+  title: 'Diffmint Docs',
   sections: [
     {
       title: 'Getting Started',

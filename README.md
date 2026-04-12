@@ -1,10 +1,11 @@
-# Devflow
+# Diffmint
 
-Devflow is a local-first, policy-driven code review product.
+Diffmint is a local-first, policy-driven code review product.
 
 - Primary experience: CLI and VS Code extension
 - Web role: control plane for workspaces, providers, Polar billing, policies, history, audit, and docs
 - Package manager: `pnpm`
+- Production domain: [diffmint.io](https://diffmint.io)
 - Local dev stack: `Docker Compose` with hot reload and Postgres
 
 ## Monorepo
@@ -12,7 +13,7 @@ Devflow is a local-first, policy-driven code review product.
 ```text
 apps/
   web/       Next.js control plane and docs host
-  cli/       devflow CLI
+  cli/       dm CLI
   vscode/    VS Code extension companion
 packages/
   contracts/      shared types and API contracts
@@ -27,22 +28,26 @@ packages/
 
 Implemented command surface:
 
-- `devflow auth login`
-- `devflow auth logout`
-- `devflow config set-provider`
-- `devflow review`
-- `devflow explain`
-- `devflow tests`
-- `devflow history`
-- `devflow doctor`
+- `dm auth login`
+- `dm auth logout`
+- `dm config set-provider`
+- `dm review`
+- `dm explain`
+- `dm tests`
+- `dm history`
+- `dm doctor`
 
 Current status:
 
 - command UX works
 - device auth now includes browser approval, and bootstrap/history sync use approved client sessions
 - local scaffold review works with offline fallback
+- review commands now switch to Qwen headless mode automatically when a local `qwen` binary and
+  compatible provider credentials are available
+- offline sync queue preserves review uploads until the control plane is reachable again
 - history is stored locally and can sync to the web control plane
-- real Qwen execution is still pending
+- scaffold mode remains available through `DIFFMINT_REVIEW_RUNTIME=scaffold` for deterministic local
+  runs and CI
 
 ### VS Code extension
 
@@ -128,6 +133,9 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
+For production-like environments, also set `DIFFMINT_REQUIRE_PERSISTENCE=true` so the control plane
+fails fast when Postgres is unavailable instead of silently falling back to in-memory state.
+
 ### Docker
 
 ```bash
@@ -143,6 +151,15 @@ The Docker stack starts:
 - Postgres on `localhost:5432`
 - migrations and seed data before the web server boots
 
+Production builds use webpack for stability. Development keeps the normal `next dev` workflow for hot reload.
+
+Runtime probes:
+
+- live: `/api/health/live`
+- ready: `/api/health/ready`
+
+The Docker dev stack and production image now use the readiness endpoint for health checks.
+
 ## Environment
 
 Core variables live in [apps/web/env.example.txt](/Users/bon/Documents/my-workspace/next-shadcn-dashboard-starter/apps/web/env.example.txt).
@@ -150,10 +167,36 @@ Core variables live in [apps/web/env.example.txt](/Users/bon/Documents/my-worksp
 Main groups:
 
 - Clerk auth: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
+- Clerk local smoke override: `DIFFMINT_DISABLE_CLERK`, `NEXT_PUBLIC_DIFFMINT_DISABLE_CLERK`
 - Postgres: `DATABASE_URL`
+- strict persistence mode: `DIFFMINT_REQUIRE_PERSISTENCE`
 - Polar billing: `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`, `POLAR_PRODUCT_ID_*`, `POLAR_SERVER`
-- App URL: `DEVFLOW_APP_URL`
-- Sentry: `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`
+- App URL: `DIFFMINT_APP_URL`
+- release signing: `DIFFMINT_RELEASE_SIGNING_PRIVATE_KEY`, `DIFFMINT_RELEASE_SIGNING_KEY_ID`
+- web security hardening: `DIFFMINT_ENABLE_HSTS`
+- Sentry: `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_ORG`, `NEXT_PUBLIC_SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`
+
+Sentry is optional. Runtime monitoring only turns on when a DSN is configured, and the build plugin
+only turns on when the DSN, org, project, and auth token are all present.
+
+The web app now emits baseline security headers for pages and APIs, including `X-Frame-Options`,
+`Referrer-Policy`, and `Permissions-Policy`. `Strict-Transport-Security` is enabled in production
+and can be forced on with `DIFFMINT_ENABLE_HSTS=true`.
+
+When Sentry runtime monitoring is off, the web build now aliases Sentry imports to a no-op runtime
+to avoid unnecessary OpenTelemetry build noise and keep local production smoke runs cleaner.
+
+For local production smoke tests, you can force public-mode auth behavior even if your machine has
+Clerk keys in `apps/web/.env`:
+
+```bash
+DIFFMINT_DISABLE_CLERK=true NEXT_PUBLIC_DIFFMINT_DISABLE_CLERK=true pnpm start:web
+```
+
+The public release manifest endpoint can also sign CLI and VS Code release metadata when
+`DIFFMINT_RELEASE_SIGNING_PRIVATE_KEY` is set. Signed manifests include a stable `signature`
+envelope with `algorithm`, `keyId`, `signedAt`, and `value`, which keeps updater and release
+channel clients on a verifiable contract without changing the endpoint shape.
 
 ## Testing
 
@@ -172,6 +215,7 @@ What is covered now:
 
 - docs-content loaders and navigation
 - review-core request/session logic
+- review-core runtime switching between scaffold mode and Qwen headless execution
 - CLI login/provider/review/history flows
 - control-plane service lifecycle for device auth, synced history, usage, and audit events
 - approved client-session checks for bootstrap, policies, history, and usage routes
@@ -194,9 +238,8 @@ Key pages:
 
 ## Current reality
 
-This repo now looks like Devflow instead of the original dashboard starter, but a few production-critical systems are still scaffolded:
+This repo now looks like Diffmint instead of the original dashboard starter, but a few production-critical systems are still being hardened:
 
-- real Qwen headless execution
 - advanced billing reconciliation beyond the current webhook snapshot updates
 - extension packaging/release flow
 

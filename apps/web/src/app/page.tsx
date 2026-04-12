@@ -1,8 +1,8 @@
-import { auth } from '@clerk/nextjs/server';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
+import { getServerAuthContext } from '@/lib/clerk/server-auth';
 import Link from 'next/link';
 
 const productPillars = [
@@ -22,7 +22,7 @@ const productPillars = [
 ];
 
 export default async function HomePage() {
-  const { userId } = await auth();
+  const { userId } = await getServerAuthContext();
   const dashboardHref = userId ? '/dashboard/overview' : '/auth/sign-in';
 
   return (
@@ -34,7 +34,7 @@ export default async function HomePage() {
             <span className='flex h-10 w-10 items-center justify-center rounded-2xl border bg-background shadow-sm'>
               <Icons.logo className='h-5 w-5' />
             </span>
-            <span className='text-lg font-semibold'>Devflow</span>
+            <span className='text-lg font-semibold'>Diffmint</span>
           </Link>
           <div className='flex items-center gap-2'>
             <Button variant='ghost' asChild>
@@ -59,7 +59,7 @@ export default async function HomePage() {
                 Policy-driven code review where the real work stays in the terminal and editor.
               </h1>
               <p className='text-muted-foreground max-w-2xl text-lg leading-8'>
-                Devflow wraps a terminal-first review engine with workspace policies, provider
+                Diffmint wraps a terminal-first review engine with workspace policies, provider
                 control, synced history, audit trails, and docs that let teams onboard without a
                 guided setup call.
               </p>

@@ -1,0 +1,17 @@
+---
+title: Health and readiness probes
+description: Diffmint now exposes live and readiness endpoints and uses them for Docker and production container health checks.
+section: Changelog
+order: 150
+surfaces:
+  - web
+  - admin
+related:
+  - /docs/getting-started/docker-development
+---
+
+# Health and readiness probes
+
+- Added `/api/health/live` for lightweight process liveness.
+- Added `/api/health/ready` for deploy readiness, including docs, auth, billing, and database checks.
+- Docker Compose and the production web image now use the readiness endpoint for health checks.

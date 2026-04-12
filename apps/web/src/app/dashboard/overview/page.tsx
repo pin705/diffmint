@@ -4,6 +4,7 @@ import { ControlPlaneOverviewPage } from '@/features/control-plane/components/ov
 import { requireWorkspaceAccess } from '@/features/control-plane/server/access';
 import {
   getOverviewStats,
+  listClientInstallations,
   listPolicies,
   listProviders,
   listReviewSessions
@@ -12,12 +13,14 @@ import {
 export default async function OverviewPage() {
   const { orgId } = await requireWorkspaceAccess();
 
-  const [overviewStats, policyBundles, providerSummaries, reviewSessions] = await Promise.all([
-    getOverviewStats(orgId),
-    listPolicies(orgId),
-    listProviders(orgId),
-    listReviewSessions(orgId)
-  ]);
+  const [overviewStats, policyBundles, providerSummaries, reviewSessions, clientInstallations] =
+    await Promise.all([
+      getOverviewStats(orgId),
+      listPolicies(orgId),
+      listProviders(orgId),
+      listReviewSessions(orgId),
+      listClientInstallations(orgId)
+    ]);
 
   return (
     <PageContainer
@@ -30,6 +33,7 @@ export default async function OverviewPage() {
         policyBundles={policyBundles}
         providerSummaries={providerSummaries}
         reviewSessions={reviewSessions}
+        clientInstallations={clientInstallations}
       />
     </PageContainer>
   );

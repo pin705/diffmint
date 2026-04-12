@@ -1,0 +1,17 @@
+---
+title: CLI offline sync queue
+description: Review sync payloads now queue locally and flush automatically after the control plane reconnects.
+section: Changelog
+order: 90
+surfaces:
+  - cli
+related:
+  - /docs/concepts/local-first-review
+  - /docs/troubleshooting/auth-and-doctor
+---
+
+# CLI offline sync queue
+
+- Diffmint now stores failed review sync uploads in a local queue instead of dropping them.
+- Queued review and usage payloads flush automatically after a workspace-connected command succeeds.
+- `dm doctor` now reports whether queued sync items are waiting locally.

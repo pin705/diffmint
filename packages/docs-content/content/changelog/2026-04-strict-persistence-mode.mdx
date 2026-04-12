@@ -1,0 +1,18 @@
+---
+title: Strict Persistence Mode
+description: Diffmint can now fail fast in production when Postgres is required and unavailable.
+section: Changelog
+order: 202604131430
+surfaces:
+  - web
+  - admin
+related:
+  - /docs/getting-started/docker-development
+  - /docs/security/privacy-and-redaction
+---
+
+# Strict Persistence Mode
+
+- added `DIFFMINT_REQUIRE_PERSISTENCE=true` for production environments that must not fall back to in-memory control-plane state
+- service-layer persistence now fails fast when Postgres is required but unavailable
+- readiness checks now report a failing database check when strict persistence is enabled without an active database

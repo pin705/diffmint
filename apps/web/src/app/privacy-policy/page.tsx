@@ -16,8 +16,8 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className='text-foreground mb-3 text-xl font-semibold'>Introduction</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
-            Devflow is designed for local-first code review. This policy explains what data stays on
-            your machine, what data can sync to the control plane, and which third-party services
+            Diffmint is designed for local-first code review. This policy explains what data stays
+            on your machine, what data can sync to the control plane, and which third-party services
             support authentication and billing.
           </p>
         </section>
@@ -25,7 +25,7 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className='text-foreground mb-3 text-xl font-semibold'>Local-first review data</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
-            Devflow does not require full repository upload by default. The CLI and VS Code
+            Diffmint does not require full repository upload by default. The CLI and VS Code
             extension analyze local diffs and files on your machine first. Workspaces can choose to
             sync selected artifacts such as summaries, severities, trace IDs, provider metadata, and
             markdown reports to the control plane.
@@ -62,10 +62,10 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className='text-foreground mb-3 text-xl font-semibold'>Billing by Polar</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
-            Devflow uses Polar for checkout, subscriptions, invoices, and customer portal sessions.
+            Diffmint uses Polar for checkout, subscriptions, invoices, and customer portal sessions.
             Workspace billing metadata such as plan selection, seat usage, and subscription state
             may be synchronized with Polar to manage paid access. Do not store raw payment
-            information in Devflow itself.
+            information in Diffmint itself.
           </p>
         </section>
 

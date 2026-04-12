@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
+import { isSentryRuntimeEnabled } from '@/lib/sentry/flags';
 
 const sentryOptions: Sentry.NodeOptions | Sentry.EdgeOptions = {
   // Sentry DSN
@@ -18,7 +19,7 @@ const sentryOptions: Sentry.NodeOptions | Sentry.EdgeOptions = {
 };
 
 export async function register() {
-  if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED) {
+  if (isSentryRuntimeEnabled()) {
     if (process.env.NEXT_RUNTIME === 'nodejs') {
       // Node.js Sentry configuration
       Sentry.init(sentryOptions);

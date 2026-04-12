@@ -1,0 +1,16 @@
+---
+title: Production build hardening
+description: Web production builds now use the more stable webpack path while local development keeps the standard hot-reload flow.
+section: Changelog
+order: 110
+surfaces:
+  - web
+related:
+  - /docs/getting-started/docker-development
+---
+
+# Production build hardening
+
+- Web production builds now run through Next.js webpack mode for more predictable CI and release builds.
+- Local development keeps the regular `next dev` flow, so hot reload behavior stays unchanged.
+- This change pairs with the optional Sentry build guard to keep production build prerequisites explicit.

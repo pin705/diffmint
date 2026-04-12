@@ -16,17 +16,17 @@ related:
 
 # DB Persistence and Webhook Hardening
 
-Devflow now treats the control plane as a persistence-aware application instead of a group of disconnected mock routes.
+Diffmint now treats the control plane as a persistence-aware application instead of a group of disconnected mock routes.
 
 ## Highlights
 
 - control-plane services now use a shared async runtime that can read from Postgres when `DATABASE_URL` is available and fall back to in-memory state for local development and tests
 - workspace bootstrap, provider lists, policies, review history, usage events, audit events, and billing snapshots all share the same service layer
-- `devflow auth login`, review sync, remote history reads, and device auth routes remain local-first but can now work against a real control plane data layer
+- `dm auth login`, review sync, remote history reads, and device auth routes remain local-first but can now work against a real control plane data layer
 - Polar webhook payloads now feed billing state and audit history through the same service layer
 - dashboard pages continue to use the existing theme and component system while reading from the new persistence-aware backend
 
 ## Notes
 
 - this release keeps the current visual language intact and focuses on backend hardening rather than UI redesign
-- database-backed persistence is opportunistic: if the database is unavailable, Devflow falls back to the seeded runtime so local development remains smooth
+- database-backed persistence is opportunistic: if the database is unavailable, Diffmint falls back to the seeded runtime so local development remains smooth

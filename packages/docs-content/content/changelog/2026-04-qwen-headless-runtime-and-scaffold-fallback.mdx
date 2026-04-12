@@ -1,0 +1,19 @@
+---
+title: Qwen headless runtime and scaffold fallback
+description: CLI review runs now use Qwen headless mode when available and stay deterministic in scaffold mode when needed.
+section: Changelog
+order: 70
+surfaces:
+  - cli
+related:
+  - /docs/cli/reference
+  - /docs/troubleshooting/auth-and-doctor
+---
+
+# Qwen headless runtime and scaffold fallback
+
+- `dm review` now routes through the Qwen headless runtime when a local `qwen` binary is available.
+- If Qwen is missing, unauthenticated, or explicitly disabled with `DIFFMINT_REVIEW_RUNTIME=scaffold`,
+  Diffmint falls back to the built-in scaffold reviewer.
+- Unit tests now pin CLI integration tests to scaffold mode and cover the mocked Qwen runtime path
+  to keep the test suite deterministic.

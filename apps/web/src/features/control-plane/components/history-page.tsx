@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import type { ReviewSession } from '@devflow/contracts';
+import type { ReviewSession } from '@diffmint/contracts';
 
 interface HistoryPageContentProps {
   reviewSessions: ReviewSession[];

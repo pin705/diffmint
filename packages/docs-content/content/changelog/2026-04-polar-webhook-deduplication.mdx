@@ -1,0 +1,17 @@
+---
+title: Polar webhook deduplication
+description: Billing webhook retries now deduplicate before changing workspace billing state or audit logs.
+section: Changelog
+order: 80
+surfaces:
+  - web
+  - admin
+related:
+  - /docs/admin/billing-with-polar
+---
+
+# Polar webhook deduplication
+
+- Repeated Polar webhook deliveries are now deduplicated in the control-plane service.
+- Duplicate deliveries no longer create extra audit entries or re-apply the same billing seat update.
+- The billing guide now documents this retry-safe behavior for production webhook operations.

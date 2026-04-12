@@ -27,6 +27,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error('Failed to seed Devflow control-plane data.', error);
+  console.error('Failed to seed Diffmint control-plane data.', error);
   process.exitCode = 1;
 });

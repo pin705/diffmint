@@ -1,4 +1,4 @@
-import { getDocBySlug, getDocsNavigation } from '@devflow/docs-content';
+import { getDocBySlug, getDocsNavigation } from '@diffmint/docs-content';
 import { notFound } from 'next/navigation';
 import PageContainer from '@/components/layout/page-container';
 import { DocsShell } from '@/components/docs/docs-shell';

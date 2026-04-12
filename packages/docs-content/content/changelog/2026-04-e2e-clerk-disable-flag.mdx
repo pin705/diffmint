@@ -1,0 +1,16 @@
+---
+title: E2E Clerk disable flag
+description: Production smoke tests now stay deterministic even when local Clerk keys are present.
+section: Changelog
+order: 120
+surfaces:
+  - web
+  - admin
+related:
+  - /docs/getting-started/5-minute-quickstart
+  - /docs/changelog/2026-04-clerk-local-runtime-fallback
+---
+
+Diffmint now supports `DIFFMINT_DISABLE_CLERK` and `NEXT_PUBLIC_DIFFMINT_DISABLE_CLERK` for local
+production smoke tests. This keeps Playwright and manual `next start` verification deterministic
+even on machines that already have Clerk development keys in `apps/web/.env`.

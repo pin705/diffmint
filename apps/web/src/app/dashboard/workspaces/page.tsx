@@ -3,8 +3,13 @@
 import PageContainer from '@/components/layout/page-container';
 import { OrganizationList } from '@clerk/nextjs';
 import { workspacesInfoContent } from '@/config/infoconfig';
+import { useSearchParams } from 'next/navigation';
 
 export default function WorkspacesPage() {
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('return_to');
+  const nextUrl = returnTo && returnTo.startsWith('/') ? returnTo : '/dashboard/workspaces/team';
+
   return (
     <PageContainer
       pageTitle='Workspaces'
@@ -20,8 +25,8 @@ export default function WorkspacesPage() {
             organizationPreviewSecondaryIdentifier: 'text-sm text-muted-foreground'
           }
         }}
-        afterSelectOrganizationUrl='/dashboard/workspaces/team'
-        afterCreateOrganizationUrl='/dashboard/workspaces/team'
+        afterSelectOrganizationUrl={nextUrl}
+        afterCreateOrganizationUrl={nextUrl}
       />
     </PageContainer>
   );

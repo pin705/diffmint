@@ -23,6 +23,8 @@ export type FindingSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type ReviewSessionStatus = 'queued' | 'running' | 'completed' | 'failed';
 export type ArtifactKind = 'markdown' | 'json' | 'terminal' | 'raw-provider-output' | 'diagnostic';
 export type ReleaseChannelName = 'stable' | 'preview' | 'canary';
+export type ClientType = 'cli' | 'vscode';
+export type ReleaseSignatureAlgorithm = 'ed25519';
 
 export interface WorkspaceRef {
   id: string;
@@ -178,6 +180,24 @@ export interface DeviceAuthSession {
   workspaceId?: string;
 }
 
+export interface ClientInstallation {
+  id: string;
+  workspaceId: string;
+  userId?: string;
+  clientType: ClientType;
+  platform: string;
+  version: string;
+  channel: ReleaseChannelName;
+  lastSeenAt: string;
+}
+
+export interface ReleaseManifestSignature {
+  algorithm: ReleaseSignatureAlgorithm;
+  keyId: string;
+  signedAt: string;
+  value: string;
+}
+
 export interface ReleaseManifest {
   channel: ReleaseChannelName;
   version: string;
@@ -193,4 +213,5 @@ export interface ReleaseManifest {
     checksum: string;
   };
   notesUrl?: string;
+  signature?: ReleaseManifestSignature;
 }

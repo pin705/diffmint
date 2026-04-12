@@ -1,0 +1,31 @@
+---
+title: Device Approval Workspace Sync
+description: Device approval now follows the active workspace in the browser flow and can send users to workspace selection before approval.
+section: Changelog
+order: 70
+surfaces:
+  - cli
+  - web
+  - admin
+related:
+  - /docs/getting-started/install-cli
+  - /docs/admin/workspace-setup
+  - /docs/troubleshooting/auth-and-doctor
+---
+
+# Device Approval Workspace Sync
+
+This update improves the multi-tenant behavior of Diffmint sign-in.
+
+## What changed
+
+- the device approval page now checks whether the browser has an active workspace
+- when no workspace is active, the user is sent to workspace selection and then returned to device
+  approval
+- approving a device session now binds that session to the active workspace from the browser flow
+  instead of silently keeping the CLI's previous workspace hint
+
+## Why it matters
+
+- CLI login now tracks the workspace the user actually selected on the web
+- workspace switching is less surprising during team rollouts and support debugging

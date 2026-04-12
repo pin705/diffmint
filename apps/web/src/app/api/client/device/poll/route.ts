@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+import { jsonWithClientApiHeaders } from '@/features/control-plane/server/api-response';
 import { deviceAuthActionSchema } from '@/features/control-plane/server/schemas';
 import { pollDeviceAuth } from '@/features/control-plane/server/service';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
@@ -9,7 +13,7 @@ export async function POST(request: Request) {
     const session = await pollDeviceAuth(body.deviceCode);
 
     if (!session) {
-      return NextResponse.json(
+      return jsonWithClientApiHeaders(
         {
           error: 'Unknown device code.'
         },
@@ -17,10 +21,10 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(session);
+    return jsonWithClientApiHeaders(session);
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json(
+      return jsonWithClientApiHeaders(
         {
           error: 'Invalid device auth poll payload.',
           issues: error.issues
@@ -29,7 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(
+    return jsonWithClientApiHeaders(
       {
         error: 'Unable to poll device auth status.'
       },

@@ -9,7 +9,7 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 
 export const metadata: Metadata = {
-  title: 'Devflow Control Plane',
+  title: 'Diffmint Control Plane',
   description:
     'Workspace governance, providers, Polar billing, synced review history, audit, and docs.',
   robots: {

@@ -1,5 +1,5 @@
 {
-  "name": "@devflow/review-core",
+  "name": "@diffmint/review-core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@devflow/contracts": "workspace:*",
-    "@devflow/policy-engine": "workspace:*"
+    "@diffmint/contracts": "workspace:*",
+    "@diffmint/policy-engine": "workspace:*"
   }
 }

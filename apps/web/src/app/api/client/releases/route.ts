@@ -1,8 +1,14 @@
-import { NextResponse } from 'next/server';
+import { jsonWithClientApiHeaders } from '@/features/control-plane/server/api-response';
 import { listReleaseManifests } from '@/features/control-plane/server/service';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
-  return NextResponse.json({
-    items: await listReleaseManifests()
-  });
+  return jsonWithClientApiHeaders(
+    {
+      items: await listReleaseManifests()
+    },
+    { sensitive: false }
+  );
 }

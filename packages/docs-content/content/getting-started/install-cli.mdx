@@ -1,6 +1,6 @@
 ---
 title: Install the CLI
-description: Set up the Devflow terminal workflow and connect it to the control plane.
+description: Set up the Diffmint terminal workflow and connect it to the control plane.
 section: Getting Started
 order: 20
 surfaces:
@@ -24,22 +24,26 @@ pnpm install
 ## Sign in and select a workspace
 
 ```bash
-devflow auth login
-devflow config set-provider qwen
-devflow doctor
+dm auth login
+dm config set-provider qwen
+dm doctor
 ```
 
-The browser step now lands on a dedicated device approval page. Sign in, approve the device
-session, then return to the terminal.
+The browser step now lands on a dedicated device approval page. Sign in, switch to the correct
+workspace if needed, approve the device session, then return to the terminal.
+
+If `qwen` is available on your machine and your provider credentials are configured, review runs
+will use Qwen headless mode automatically. Otherwise Diffmint stays in scaffold mode so onboarding
+and local testing still work.
 
 ## Typical review commands
 
 ```bash
-devflow review --staged
-devflow review --base origin/main
-devflow review --files src/app/page.tsx src/lib/review.ts
-devflow explain src/app/page.tsx
-devflow tests src/lib/review.ts
+dm review --staged
+dm review --base origin/main
+dm review --files src/app/page.tsx src/lib/review.ts
+dm explain src/app/page.tsx
+dm tests src/lib/review.ts
 ```
 
 See the full [CLI reference](/docs/cli/reference) for flags and JSON output.

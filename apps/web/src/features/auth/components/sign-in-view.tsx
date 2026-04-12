@@ -8,7 +8,7 @@ import { InteractiveGridPattern } from './interactive-grid';
 
 export const metadata: Metadata = {
   title: 'Authentication',
-  description: 'Sign in to your Devflow workspace.'
+  description: 'Sign in to your Diffmint workspace.'
 };
 
 export default function SignInViewPage() {
@@ -27,7 +27,7 @@ export default function SignInViewPage() {
         <div className='absolute inset-0 bg-sidebar' />
         <div className='text-sidebar-foreground relative z-20 flex items-center text-lg font-medium'>
           <Icons.logo className='mr-2 h-6 w-6' />
-          Devflow
+          Diffmint
         </div>
         <InteractiveGridPattern
           className={cn(
@@ -41,7 +41,7 @@ export default function SignInViewPage() {
               &ldquo;Run local-first reviews from the CLI or editor, then use the control plane for
               governance, history, billing, and audit.&rdquo;
             </p>
-            <footer className='text-sidebar-foreground/70 text-sm'>Devflow production plan</footer>
+            <footer className='text-sidebar-foreground/70 text-sm'>Diffmint production plan</footer>
           </blockquote>
         </div>
       </div>
@@ -53,14 +53,10 @@ export default function SignInViewPage() {
           >
             Open the 5-minute quickstart
           </Link>
-          <ClerkSignInForm
-            initialValues={{
-              emailAddress: 'your_mail+clerk_test@example.com'
-            }}
-          />
+          <ClerkSignInForm />
           <div className='text-muted-foreground space-y-2 px-8 text-center text-xs'>
             <p>
-              Devflow uses{' '}
+              Diffmint uses{' '}
               <Link
                 href='/privacy-policy'
                 className='hover:text-primary underline underline-offset-4'

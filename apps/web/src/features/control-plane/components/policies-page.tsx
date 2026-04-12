@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import type { PolicyBundle } from '@devflow/contracts';
+import type { PolicyBundle } from '@diffmint/contracts';
 
 interface PoliciesPageContentProps {
   policyBundles: PolicyBundle[];

@@ -5,6 +5,7 @@ const getOverviewStatsMock = vi.fn();
 const listPoliciesMock = vi.fn();
 const listProvidersMock = vi.fn();
 const listReviewSessionsMock = vi.fn();
+const listClientInstallationsMock = vi.fn();
 const listAuditEventsMock = vi.fn();
 
 vi.mock('@/components/layout/page-container', () => ({
@@ -40,6 +41,7 @@ vi.mock('@/features/control-plane/server/service', () => ({
   listPolicies: listPoliciesMock,
   listProviders: listProvidersMock,
   listReviewSessions: listReviewSessionsMock,
+  listClientInstallations: listClientInstallationsMock,
   listAuditEvents: listAuditEventsMock
 }));
 
@@ -55,6 +57,7 @@ describe('dashboard page workspace scoping', () => {
     listPoliciesMock.mockResolvedValue([]);
     listProvidersMock.mockResolvedValue([]);
     listReviewSessionsMock.mockResolvedValue([]);
+    listClientInstallationsMock.mockResolvedValue([]);
     listAuditEventsMock.mockResolvedValue([]);
   });
 
@@ -67,6 +70,7 @@ describe('dashboard page workspace scoping', () => {
     expect(listPoliciesMock).toHaveBeenCalledWith('org_workspace_test');
     expect(listProvidersMock).toHaveBeenCalledWith('org_workspace_test');
     expect(listReviewSessionsMock).toHaveBeenCalledWith('org_workspace_test');
+    expect(listClientInstallationsMock).toHaveBeenCalledWith('org_workspace_test');
   });
 
   it('passes the active workspace id into providers, policies, history, and audit data loading', async () => {

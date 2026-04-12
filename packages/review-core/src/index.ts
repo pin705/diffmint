@@ -10,8 +10,8 @@ import type {
   ReviewRequest,
   ReviewSession,
   ReviewSourceType
-} from '@devflow/contracts';
-import { buildPolicyPrompt } from '@devflow/policy-engine';
+} from '@diffmint/contracts';
+import { buildPolicyPrompt } from '@diffmint/policy-engine';
 
 export interface BuildReviewRequestOptions {
   cwd: string;
@@ -33,6 +33,25 @@ export interface DoctorCheck {
   label: string;
   status: 'ok' | 'warn' | 'fail';
   detail: string;
+}
+
+export interface CreateReviewSessionRuntimeOptions {
+  cwd?: string;
+  policy?: PolicyBundle;
+  provider?: string;
+  model?: string;
+}
+
+export interface ReviewSessionSanitizationOptions {
+  redactText?: boolean;
+  omitRawProviderOutput?: boolean;
+}
+
+interface QwenHeadlessResult {
+  findings: Finding[];
+  summary: string;
+  durationMs: number;
+  rawOutput: string;
 }
 
 function run(command: string, args: string[], cwd: string): string {
@@ -103,6 +122,50 @@ function countSeverity(findings: Finding[], severity: FindingSeverity): number {
   return findings.filter((item) => item.severity === severity).length;
 }
 
+function redactSensitiveText(value: string | undefined): string | undefined {
+  if (typeof value !== 'string' || value.length === 0) {
+    return value;
+  }
+
+  return value
+    .replace(
+      /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]+?-----END [A-Z ]*PRIVATE KEY-----/g,
+      '[REDACTED PRIVATE KEY]'
+    )
+    .replace(/\bBearer\s+[A-Za-z0-9\-._~+/]+=*\b/gi, 'Bearer [REDACTED]')
+    .replace(/\b(?:sk|pk|rk)_[A-Za-z0-9_-]{16,}\b/g, '[REDACTED API KEY]')
+    .replace(/\bsk-[A-Za-z0-9_-]{16,}\b/g, '[REDACTED API KEY]')
+    .replace(/\bgh[pousr]_[A-Za-z0-9]{20,}\b/g, '[REDACTED GITHUB TOKEN]')
+    .replace(/\bgithub_pat_[A-Za-z0-9_]{20,}\b/g, '[REDACTED GITHUB TOKEN]')
+    .replace(/\bAKIA[0-9A-Z]{16}\b/g, '[REDACTED AWS ACCESS KEY]')
+    .replace(/\bAIza[0-9A-Za-z_-]{20,}\b/g, '[REDACTED GOOGLE API KEY]')
+    .replace(/\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g, '[REDACTED SLACK TOKEN]')
+    .replace(
+      /((?:token|secret|password|passphrase|api[_-]?key|access[_-]?key|client[_-]?secret)\s*[:=]\s*)(['"]?)([^'"\s]+)\2/gi,
+      (_match: string, prefix: string, quote: string) => `${prefix}${quote}[REDACTED]${quote}`
+    );
+}
+
+function sanitizeArtifactForCloudSync(
+  artifact: ReviewSession['artifacts'][number],
+  options: Required<ReviewSessionSanitizationOptions>
+): ReviewSession['artifacts'][number] {
+  if (options.omitRawProviderOutput && artifact.kind === 'raw-provider-output') {
+    return {
+      ...artifact,
+      mimeType: 'text/plain',
+      content: '[REDACTED raw provider output omitted from cloud sync]',
+      storageKey: undefined
+    };
+  }
+
+  return {
+    ...artifact,
+    content: options.redactText ? redactSensitiveText(artifact.content) : artifact.content,
+    storageKey: options.redactText ? redactSensitiveText(artifact.storageKey) : artifact.storageKey
+  };
+}
+
 function createFinding(
   severity: FindingSeverity,
   title: string,
@@ -166,6 +229,248 @@ export function previewHeadlessCommand(request: ReviewRequest, policy?: PolicyBu
   return baseArgs;
 }
 
+function findQwenBinary(cwd: string): string | null {
+  const candidates = ['qwen', 'qwen-code', 'qwen-code-cli'];
+
+  for (const candidate of candidates) {
+    if (tryRun(candidate, ['--version'], cwd)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function hasHeadlessAuthConfig(): boolean {
+  return Boolean(
+    process.env.OPENAI_API_KEY ||
+    process.env.QWEN_API_KEY ||
+    process.env.DASHSCOPE_API_KEY ||
+    process.env.ANTHROPIC_API_KEY
+  );
+}
+
+function shouldUseQwenRuntime(cwd: string): boolean {
+  const forcedMode = process.env.DIFFMINT_REVIEW_RUNTIME;
+
+  if (forcedMode === 'scaffold') {
+    return false;
+  }
+
+  if (forcedMode === 'qwen') {
+    return Boolean(findQwenBinary(cwd));
+  }
+
+  return Boolean(findQwenBinary(cwd) && hasHeadlessAuthConfig());
+}
+
+function buildHeadlessReviewPrompt(request: ReviewRequest, policy?: PolicyBundle): string {
+  const instructions = [
+    'You are Diffmint, a policy-driven code review runtime.',
+    'Review the git diff provided on stdin.',
+    'Focus on concrete bugs, security issues, regressions, missing tests, and policy violations.',
+    'Do not suggest style-only nits unless they create risk.',
+    'Return valid JSON only with this shape:',
+    '{"summary":"string","findings":[{"severity":"low|medium|high|critical","title":"string","summary":"string","filePath":"optional string","suggestedAction":"optional string"}]}',
+    `Review mode: ${request.mode}.`,
+    `Review source: ${request.source}.`,
+    `Files in scope: ${request.files.length > 0 ? request.files.join(', ') : 'auto-detected from diff'}.`
+  ];
+
+  if (policy) {
+    instructions.push(`Active policy version: ${policy.policyVersionId}.`);
+    instructions.push(`Policy summary: ${policy.summary}`);
+  }
+
+  return instructions.join('\n');
+}
+
+function extractAssistantTextFromQwenPayload(payload: unknown): string | null {
+  if (!Array.isArray(payload)) {
+    return null;
+  }
+
+  for (let index = payload.length - 1; index >= 0; index -= 1) {
+    const item = payload[index];
+
+    if (
+      item &&
+      typeof item === 'object' &&
+      'type' in item &&
+      (item as { type?: string }).type === 'result' &&
+      typeof (item as { result?: unknown }).result === 'string'
+    ) {
+      return (item as { result: string }).result;
+    }
+
+    if (
+      item &&
+      typeof item === 'object' &&
+      'type' in item &&
+      (item as { type?: string }).type === 'assistant'
+    ) {
+      const message = (item as { message?: { content?: Array<{ type?: string; text?: string }> } })
+        .message;
+      const textParts =
+        message?.content
+          ?.filter(
+            (contentPart) => contentPart.type === 'text' && typeof contentPart.text === 'string'
+          )
+          .map((contentPart) => contentPart.text as string) ?? [];
+
+      if (textParts.length > 0) {
+        return textParts.join('\n');
+      }
+    }
+  }
+
+  return null;
+}
+
+function extractJsonObject(raw: string): string | null {
+  const trimmed = raw.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const directStart = trimmed.indexOf('{');
+  const directEnd = trimmed.lastIndexOf('}');
+
+  if (directStart !== -1 && directEnd !== -1 && directEnd > directStart) {
+    return trimmed.slice(directStart, directEnd + 1);
+  }
+
+  return null;
+}
+
+function normalizeFindingFromQwen(value: unknown): Finding | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const severity = candidate.severity;
+  const title = candidate.title;
+  const summary = candidate.summary;
+
+  if (
+    severity !== 'low' &&
+    severity !== 'medium' &&
+    severity !== 'high' &&
+    severity !== 'critical'
+  ) {
+    return null;
+  }
+
+  if (typeof title !== 'string' || typeof summary !== 'string') {
+    return null;
+  }
+
+  return {
+    id: randomUUID(),
+    severity,
+    title,
+    summary,
+    filePath: typeof candidate.filePath === 'string' ? candidate.filePath : undefined,
+    suggestedAction:
+      typeof candidate.suggestedAction === 'string' ? candidate.suggestedAction : undefined
+  };
+}
+
+function parseQwenHeadlessOutput(rawOutput: string): QwenHeadlessResult | null {
+  try {
+    const payload = JSON.parse(rawOutput) as unknown;
+    const assistantText = extractAssistantTextFromQwenPayload(payload);
+
+    if (!assistantText) {
+      return null;
+    }
+
+    const embeddedJson = extractJsonObject(assistantText);
+
+    if (!embeddedJson) {
+      return {
+        findings: [],
+        summary: assistantText.trim(),
+        durationMs: 1000,
+        rawOutput
+      };
+    }
+
+    const reviewPayload = JSON.parse(embeddedJson) as {
+      summary?: unknown;
+      findings?: unknown[];
+    };
+    const findings =
+      reviewPayload.findings
+        ?.map((finding) => normalizeFindingFromQwen(finding))
+        .filter((finding): finding is Finding => Boolean(finding)) ?? [];
+    const summary =
+      typeof reviewPayload.summary === 'string' && reviewPayload.summary.trim().length > 0
+        ? reviewPayload.summary.trim()
+        : findings.length === 0
+          ? 'Qwen completed the headless review with no structured findings.'
+          : `Qwen completed the headless review with ${findings.length} structured findings.`;
+
+    return {
+      findings,
+      summary,
+      durationMs: 1000,
+      rawOutput
+    };
+  } catch {
+    return null;
+  }
+}
+
+function runQwenHeadlessReview(
+  request: ReviewRequest,
+  options: CreateReviewSessionRuntimeOptions
+): QwenHeadlessResult | null {
+  const cwd = options.cwd ?? request.metadata.cwd;
+  const qwenBinary = findQwenBinary(cwd);
+
+  if (!qwenBinary) {
+    return null;
+  }
+
+  const startedAt = Date.now();
+
+  try {
+    const output = execFileSync(
+      qwenBinary,
+      [
+        '--prompt',
+        buildHeadlessReviewPrompt(request, options.policy),
+        '--output-format',
+        'json',
+        '--model',
+        options.model ?? request.metadata.model ?? 'qwen-code'
+      ],
+      {
+        cwd,
+        encoding: 'utf8',
+        input: request.diff,
+        stdio: ['pipe', 'pipe', 'pipe']
+      }
+    );
+
+    const parsed = parseQwenHeadlessOutput(output);
+
+    if (!parsed) {
+      return null;
+    }
+
+    return {
+      ...parsed,
+      durationMs: Math.max(Date.now() - startedAt, 1)
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function createFindingsFromRequest(request: ReviewRequest): Finding[] {
   const findings: Finding[] = [];
 
@@ -195,7 +500,7 @@ export function createFindingsFromRequest(request: ReviewRequest): Finding[] {
           'Sensitive control-plane surface changed',
           `Changes in ${file} affect auth, billing, or API behavior. Run a security-oriented pass and capture verification steps before merge.`,
           file,
-          'Rerun with `devflow review --base origin/main --mode security` and document the verification plan.'
+          'Rerun with `dm review --base origin/main --mode security` and document the verification plan.'
         )
       );
     }
@@ -268,6 +573,98 @@ export function createReviewSession(request: ReviewRequest): ReviewSession {
   };
 }
 
+export async function createReviewSessionWithRuntime(
+  request: ReviewRequest,
+  options: CreateReviewSessionRuntimeOptions = {}
+): Promise<ReviewSession> {
+  const cwd = options.cwd ?? request.metadata.cwd;
+
+  if (!shouldUseQwenRuntime(cwd)) {
+    return createReviewSession(request);
+  }
+
+  const runtimeResult = runQwenHeadlessReview(request, options);
+
+  if (!runtimeResult) {
+    return createReviewSession(request);
+  }
+
+  const findings = runtimeResult.findings;
+  const startedAt = new Date().toISOString();
+  const completedAt = new Date().toISOString();
+
+  return {
+    id: randomUUID(),
+    traceId: request.traceId,
+    requestId: request.id,
+    source: request.source,
+    commandSource: request.commandSource,
+    provider: options.provider ?? request.metadata.provider ?? 'qwen',
+    model: options.model ?? request.metadata.model ?? 'qwen-code',
+    policyVersionId: request.policyVersionId,
+    status: 'completed',
+    findings,
+    summary: runtimeResult.summary,
+    severityCounts: {
+      low: countSeverity(findings, 'low'),
+      medium: countSeverity(findings, 'medium'),
+      high: countSeverity(findings, 'high'),
+      critical: countSeverity(findings, 'critical')
+    },
+    durationMs: runtimeResult.durationMs,
+    startedAt,
+    completedAt,
+    artifacts: [
+      {
+        id: randomUUID(),
+        kind: 'terminal',
+        label: 'Terminal Summary',
+        mimeType: 'text/plain',
+        content: renderTerminalSession(request, findings)
+      },
+      {
+        id: randomUUID(),
+        kind: 'raw-provider-output',
+        label: 'Qwen Headless Output',
+        mimeType: 'application/json',
+        content: runtimeResult.rawOutput
+      }
+    ]
+  };
+}
+
+export function sanitizeReviewSessionForCloudSync(
+  session: ReviewSession,
+  options: ReviewSessionSanitizationOptions = {}
+): ReviewSession {
+  const normalizedOptions: Required<ReviewSessionSanitizationOptions> = {
+    redactText: options.redactText ?? true,
+    omitRawProviderOutput: options.omitRawProviderOutput ?? true
+  };
+
+  return {
+    ...session,
+    summary: normalizedOptions.redactText
+      ? (redactSensitiveText(session.summary) ?? session.summary)
+      : session.summary,
+    findings: session.findings.map((finding) => ({
+      ...finding,
+      title: normalizedOptions.redactText
+        ? (redactSensitiveText(finding.title) ?? finding.title)
+        : finding.title,
+      summary: normalizedOptions.redactText
+        ? (redactSensitiveText(finding.summary) ?? finding.summary)
+        : finding.summary,
+      suggestedAction: normalizedOptions.redactText
+        ? redactSensitiveText(finding.suggestedAction)
+        : finding.suggestedAction
+    })),
+    artifacts: session.artifacts.map((artifact) =>
+      sanitizeArtifactForCloudSync(artifact, normalizedOptions)
+    )
+  };
+}
+
 function filesLabel(files: string[]): string {
   if (files.length === 0) {
     return 'the current diff';
@@ -282,7 +679,7 @@ function filesLabel(files: string[]): string {
 
 export function renderTerminalSession(request: ReviewRequest, findings: Finding[]): string {
   const lines = [
-    `Devflow review`,
+    `Diffmint review`,
     `Trace ID: ${request.traceId}`,
     `Scope: ${request.source.replaceAll('_', ' ')}`,
     `Mode: ${request.mode}`,
@@ -309,7 +706,7 @@ export function renderMarkdownSession(session: ReviewSession): string {
     )
     .join('\n');
 
-  return `# Devflow Review\n\n- Trace ID: \`${session.traceId}\`\n- Status: \`${session.status}\`\n- Provider: \`${session.provider}\`\n- Model: \`${session.model}\`\n\n## Findings\n${findings || '- No findings'}\n`;
+  return `# Diffmint Review\n\n- Trace ID: \`${session.traceId}\`\n- Status: \`${session.status}\`\n- Provider: \`${session.provider}\`\n- Model: \`${session.model}\`\n\n## Findings\n${findings || '- No findings'}\n`;
 }
 
 export function runDoctor(cwd: string): DoctorCheck[] {
@@ -335,10 +732,10 @@ export function runDoctor(cwd: string): DoctorCheck[] {
     {
       id: 'api',
       label: 'API base URL',
-      status: process.env.DEVFLOW_API_BASE_URL ? 'ok' : 'warn',
+      status: process.env.DIFFMINT_API_BASE_URL ? 'ok' : 'warn',
       detail:
-        process.env.DEVFLOW_API_BASE_URL ??
-        'Set DEVFLOW_API_BASE_URL to connect CLI sync and device auth to the control plane.'
+        process.env.DIFFMINT_API_BASE_URL ??
+        'Set DIFFMINT_API_BASE_URL to connect CLI sync and device auth to the control plane.'
     }
   ];
 }

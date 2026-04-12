@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import type {
+  ClientInstallation,
   DeviceAuthSession,
   PolicyBundle,
   ProviderConfigSummary,
@@ -8,11 +9,12 @@ import type {
   ReviewSession,
   UsageEvent,
   WorkspaceBootstrap
-} from '@devflow/contracts';
+} from '@diffmint/contracts';
 import { getDb } from '@/db/client';
 import {
   auditEvents as auditEventsTable,
   billingAccounts,
+  clientInstallations as clientInstallationsTable,
   deviceAuthSessions,
   policySets,
   policyVersions,
@@ -41,6 +43,12 @@ import {
   workspaceSeed,
   workspaceSyncDefaults
 } from '../data';
+import {
+  getPersistenceRequirementMessage,
+  getPersistenceUnavailableMessage,
+  isPersistenceRequired
+} from '@/lib/runtime/persistence';
+import { signReleaseManifests } from '@/lib/releases/manifest-signing';
 
 export interface AuditEventRecord {
   id: string;
@@ -85,11 +93,15 @@ interface ControlPlaneState {
   releases: ReleaseManifest[];
   usageEvents: UsageEvent[];
   auditEvents: AuditEventRecord[];
+  clientInstallations: ClientInstallation[];
   deviceSessions: StoredDeviceAuthSession[];
   billing: BillingWorkspaceSnapshot;
+  processedPolarWebhookKeys: string[];
 }
 
 interface PolarWebhookPayload {
+  id?: string;
+  timestamp?: string;
   type: string;
   data?: {
     id?: string;
@@ -114,7 +126,7 @@ type DbClient = NonNullable<ReturnType<typeof getDb>>;
 
 declare global {
   // eslint-disable-next-line no-var
-  var __devflowControlPlaneState: ControlPlaneState | undefined;
+  var __diffmintControlPlaneState: ControlPlaneState | undefined;
 }
 
 function clone<T>(value: T): T {
@@ -123,21 +135,40 @@ function clone<T>(value: T): T {
 
 function getAppUrl(): string {
   return (
-    process.env.DEVFLOW_APP_URL ??
+    process.env.DIFFMINT_APP_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
-    'http://localhost:3000'
+    'https://diffmint.io'
   );
 }
 
 function shouldAutoApproveDeviceFlow(): boolean {
-  const configuredValue = process.env.DEVFLOW_DEVICE_FLOW_AUTO_APPROVE;
+  const configuredValue = process.env.DIFFMINT_DEVICE_FLOW_AUTO_APPROVE;
 
   if (configuredValue) {
     return configuredValue === 'true';
   }
 
   return process.env.NODE_ENV !== 'production';
+}
+
+function getApprovedDeviceSessionTtlMs(): number {
+  const configuredValue = Number(process.env.DIFFMINT_DEVICE_SESSION_TTL_HOURS ?? 24 * 30);
+
+  if (Number.isFinite(configuredValue) && configuredValue > 0) {
+    return configuredValue * 60 * 60 * 1000;
+  }
+
+  return 24 * 30 * 60 * 60 * 1000;
+}
+
+function getApprovedDeviceSessionExpiresAt(): string {
+  return new Date(Date.now() + getApprovedDeviceSessionTtlMs()).toISOString();
+}
+
+function isExpiredTimestamp(value: Date | string): boolean {
+  const expiresAt = typeof value === 'string' ? new Date(value) : value;
+  return expiresAt.getTime() <= Date.now();
 }
 
 function formatAuditTimestamp(date: Date | string): string {
@@ -157,14 +188,16 @@ function createSeedState(): ControlPlaneState {
     releases: clone(seededReleaseManifests),
     usageEvents: clone(seededUsageEvents),
     auditEvents: clone(seededAuditEvents),
+    clientInstallations: [],
     deviceSessions: [],
-    billing: clone(billingWorkspaceSeed)
+    billing: clone(billingWorkspaceSeed),
+    processedPolarWebhookKeys: []
   };
 }
 
 function getState(): ControlPlaneState {
-  globalThis.__devflowControlPlaneState ??= createSeedState();
-  return globalThis.__devflowControlPlaneState;
+  globalThis.__diffmintControlPlaneState ??= createSeedState();
+  return globalThis.__diffmintControlPlaneState;
 }
 
 function toPublicDeviceSession(session: StoredDeviceAuthSession): DeviceAuthSession {
@@ -211,6 +244,69 @@ function normalizePlanKey(value?: string | null): BillingPlanKey {
   }
 
   return 'team';
+}
+
+function buildPolarWebhookDeliveryKey(payload: PolarWebhookPayload): string | null {
+  const eventId = asString(payload.id);
+
+  if (eventId) {
+    return `event:${eventId}`;
+  }
+
+  const timestamp = asString(payload.timestamp);
+
+  if (!timestamp) {
+    return null;
+  }
+
+  const entityId =
+    asString(payload.data?.id) ??
+    asString(payload.data?.customerId) ??
+    asString(payload.data?.customer?.id) ??
+    asString(payload.data?.customer?.externalId) ??
+    asString(payload.data?.metadata?.workspaceId);
+
+  if (!entityId) {
+    return `${payload.type}:${timestamp}`;
+  }
+
+  return `${payload.type}:${entityId}:${timestamp}`;
+}
+
+function getProcessedPolarWebhookKeys(metadata: Record<string, unknown>): string[] {
+  const keys = metadata.processedPolarWebhookKeys;
+
+  if (!Array.isArray(keys)) {
+    return [];
+  }
+
+  return keys.filter((key): key is string => typeof key === 'string' && key.length > 0);
+}
+
+function appendProcessedPolarWebhookKeys(existingKeys: string[], nextKey: string): string[] {
+  const dedupedKeys = existingKeys.filter((key) => key !== nextKey);
+  return [...dedupedKeys, nextKey].slice(-50);
+}
+
+function registerMemoryPolarWebhookDelivery(payload: PolarWebhookPayload): boolean {
+  const key = buildPolarWebhookDeliveryKey(payload);
+
+  if (!key) {
+    return true;
+  }
+
+  const state = getState();
+
+  if (state.processedPolarWebhookKeys.includes(key)) {
+    return false;
+  }
+
+  state.processedPolarWebhookKeys = appendProcessedPolarWebhookKeys(
+    state.processedPolarWebhookKeys,
+    key
+  );
+
+  return true;
 }
 
 function createAuditEvent(event: Omit<AuditEventRecord, 'id' | 'when'>): AuditEventRecord {
@@ -261,11 +357,14 @@ function buildOverviewStats(
   ];
 }
 
-function buildDeviceVerificationUri(deviceCode: string): {
+function buildDeviceVerificationUri(
+  deviceCode: string,
+  appUrl?: string
+): {
   verificationUri: string;
   verificationUriComplete: string;
 } {
-  const baseUrl = getAppUrl();
+  const baseUrl = appUrl ?? getAppUrl();
   const verificationUri = new URL('/auth/device', baseUrl);
   const verificationUriComplete = new URL('/auth/device', baseUrl);
   verificationUriComplete.searchParams.set('device_code', deviceCode);
@@ -405,6 +504,22 @@ function mapUsageEventFromRow(
   };
 }
 
+function mapClientInstallationFromRow(
+  row: typeof clientInstallationsTable.$inferSelect,
+  workspaceExternalId = workspaceSeed.id
+): ClientInstallation {
+  return {
+    id: row.id,
+    workspaceId: workspaceExternalId,
+    userId: row.userId ?? undefined,
+    clientType: row.clientType as ClientInstallation['clientType'],
+    platform: row.platform,
+    version: row.version,
+    channel: row.channel,
+    lastSeenAt: row.lastSeenAt.toISOString()
+  };
+}
+
 function mapAuditEventFromRow(row: typeof auditEventsTable.$inferSelect): AuditEventRecord {
   const metadata = asRecord(row.metadata);
 
@@ -472,7 +587,7 @@ async function mapDeviceSessionFromRow(
 }
 
 function getDbClient(): DbClient | null {
-  if (process.env.DEVFLOW_FORCE_MEMORY_STATE === 'true') {
+  if (process.env.DIFFMINT_FORCE_MEMORY_STATE === 'true') {
     return null;
   }
 
@@ -488,14 +603,25 @@ async function withPersistence<T>(
   dbRunner: (db: DbClient) => Promise<T>
 ): Promise<T> {
   const db = getDbClient();
+  const persistenceRequired = isPersistenceRequired();
 
   if (!db) {
+    if (persistenceRequired) {
+      throw new Error(getPersistenceRequirementMessage());
+    }
+
     return await memoryFallback();
   }
 
   try {
     return await dbRunner(db);
-  } catch {
+  } catch (error) {
+    if (persistenceRequired) {
+      throw new Error(
+        getPersistenceUnavailableMessage(error instanceof Error ? error.message : String(error))
+      );
+    }
+
     return await memoryFallback();
   }
 }
@@ -846,6 +972,21 @@ async function listAuditEventsPersistent(
   return rows.map(mapAuditEventFromRow);
 }
 
+async function listClientInstallationsPersistent(
+  db: DbClient,
+  externalWorkspaceId?: string
+): Promise<ClientInstallation[]> {
+  const workspaceRow = await getWorkspaceRow(db, externalWorkspaceId);
+  await ensureStaticSeed(db, workspaceRow);
+  const rows = await db
+    .select()
+    .from(clientInstallationsTable)
+    .where(eq(clientInstallationsTable.workspaceId, workspaceRow.id))
+    .orderBy(desc(clientInstallationsTable.lastSeenAt), asc(clientInstallationsTable.clientType));
+
+  return rows.map((row) => mapClientInstallationFromRow(row, getExternalWorkspaceId(workspaceRow)));
+}
+
 async function getBillingSnapshotPersistent(
   db: DbClient,
   context?: Partial<Pick<BillingWorkspaceContext, 'workspaceId' | 'workspaceName'>>
@@ -884,6 +1025,85 @@ async function createUsageEventPersistent(
     .returning();
 
   return mapUsageEventFromRow(row, getExternalWorkspaceId(workspaceRow));
+}
+
+async function registerClientInstallationPersistent(
+  db: DbClient,
+  installation: Omit<ClientInstallation, 'id' | 'lastSeenAt' | 'workspaceId'> & {
+    workspaceId?: string;
+  }
+): Promise<ClientInstallation> {
+  const workspaceRow = await getWorkspaceRow(db, installation.workspaceId);
+  await ensureStaticSeed(db, workspaceRow);
+
+  const matchConditions = [
+    eq(clientInstallationsTable.workspaceId, workspaceRow.id),
+    eq(clientInstallationsTable.clientType, installation.clientType),
+    eq(clientInstallationsTable.platform, installation.platform),
+    eq(clientInstallationsTable.channel, installation.channel),
+    installation.userId
+      ? eq(clientInstallationsTable.userId, installation.userId)
+      : isNull(clientInstallationsTable.userId)
+  ];
+
+  const [existing] = await db
+    .select()
+    .from(clientInstallationsTable)
+    .where(and(...matchConditions))
+    .orderBy(desc(clientInstallationsTable.lastSeenAt))
+    .limit(1);
+
+  if (existing) {
+    const [updated] = await db
+      .update(clientInstallationsTable)
+      .set({
+        version: installation.version,
+        lastSeenAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(clientInstallationsTable.id, existing.id))
+      .returning();
+
+    if (existing.version !== installation.version) {
+      await appendAuditEventPersistent(db, getExternalWorkspaceId(workspaceRow), {
+        actorId: installation.userId ?? `Diffmint ${installation.clientType.toUpperCase()}`,
+        event: 'client.installation_updated',
+        targetType: 'client_installation',
+        targetId: updated.id,
+        detail: `Updated ${installation.clientType} installation to ${installation.version}.`,
+        metadata: {
+          targetLabel: `${installation.clientType}:${installation.platform}:${installation.channel}`
+        }
+      });
+    }
+
+    return mapClientInstallationFromRow(updated, getExternalWorkspaceId(workspaceRow));
+  }
+
+  const [inserted] = await db
+    .insert(clientInstallationsTable)
+    .values({
+      workspaceId: workspaceRow.id,
+      userId: installation.userId ?? null,
+      clientType: installation.clientType,
+      platform: installation.platform,
+      version: installation.version,
+      channel: installation.channel
+    })
+    .returning();
+
+  await appendAuditEventPersistent(db, getExternalWorkspaceId(workspaceRow), {
+    actorId: installation.userId ?? `Diffmint ${installation.clientType.toUpperCase()}`,
+    event: 'client.installation_registered',
+    targetType: 'client_installation',
+    targetId: inserted.id,
+    detail: `Registered ${installation.clientType} ${installation.version} on ${installation.platform}.`,
+    metadata: {
+      targetLabel: `${installation.clientType}:${installation.platform}:${installation.channel}`
+    }
+  });
+
+  return mapClientInstallationFromRow(inserted, getExternalWorkspaceId(workspaceRow));
 }
 
 async function appendAuditEventPersistent(
@@ -935,6 +1155,10 @@ function resolvePlanKeyFromPolarPayload(payload: PolarWebhookPayload): BillingPl
 }
 
 function updateMemoryBillingState(payload: PolarWebhookPayload): void {
+  if (!registerMemoryPolarWebhookDelivery(payload)) {
+    return;
+  }
+
   const state = getState();
   const nextPlanKey = resolvePlanKeyFromPolarPayload(payload);
   const nextStatus =
@@ -980,6 +1204,14 @@ async function applyPolarWebhookPersistent(
     return;
   }
 
+  const currentMetadata = asRecord(current.metadata);
+  const deliveryKey = buildPolarWebhookDeliveryKey(payload);
+  const processedKeys = getProcessedPolarWebhookKeys(currentMetadata);
+
+  if (deliveryKey && processedKeys.includes(deliveryKey)) {
+    return;
+  }
+
   const nextPlanKey = resolvePlanKeyFromPolarPayload(payload) ?? normalizePlanKey(current.planKey);
   const nextStatus =
     payload.type === 'order.paid'
@@ -999,9 +1231,13 @@ async function applyPolarWebhookPersistent(
       seatLimit: seats,
       seatsUsed: Math.min(current.seatsUsed, seats),
       metadata: {
-        ...(asRecord(current.metadata) ?? {}),
+        ...currentMetadata,
         lastPolarEvent: payload.type,
-        lastPolarPayload: payload.data ?? null
+        lastPolarPayload: payload.data ?? null,
+        processedPolarWebhookKeys:
+          deliveryKey === null
+            ? processedKeys
+            : appendProcessedPolarWebhookKeys(processedKeys, deliveryKey)
       },
       updatedAt: new Date()
     })
@@ -1081,7 +1317,7 @@ async function recordReviewSessionPersistent(
   });
 
   await appendAuditEventPersistent(db, normalized.workspaceId, {
-    actorId: `Devflow ${normalized.commandSource.toUpperCase()}`,
+    actorId: `Diffmint ${normalized.commandSource.toUpperCase()}`,
     event: 'review.synced',
     targetType: 'review_session',
     targetId: normalized.traceId,
@@ -1194,11 +1430,23 @@ export async function listAuditEvents(workspaceId?: string): Promise<AuditEventR
   );
 }
 
-export async function listReleaseManifests(): Promise<ReleaseManifest[]> {
+export async function listClientInstallations(workspaceId?: string): Promise<ClientInstallation[]> {
   return withPersistence(
+    () =>
+      clone(getState().clientInstallations).filter((item) =>
+        workspaceId ? item.workspaceId === workspaceId : true
+      ),
+    async (db) => listClientInstallationsPersistent(db, workspaceId)
+  );
+}
+
+export async function listReleaseManifests(): Promise<ReleaseManifest[]> {
+  const manifests = await withPersistence(
     () => clone(getState().releases),
     async (db) => listReleaseManifestsPersistent(db)
   );
+
+  return signReleaseManifests(manifests);
 }
 
 export async function listUsageEvents(workspaceId?: string): Promise<UsageEvent[]> {
@@ -1276,7 +1524,7 @@ export async function recordReviewSession(session: ReviewSession): Promise<Revie
       state.auditEvents = [
         createAuditEvent({
           event: 'review.synced',
-          actor: `Devflow ${normalized.commandSource.toUpperCase()}`,
+          actor: `Diffmint ${normalized.commandSource.toUpperCase()}`,
           target: normalized.traceId,
           detail: `Uploaded ${normalized.summary}`
         }),
@@ -1309,6 +1557,74 @@ export async function recordUsageEvent(
   );
 }
 
+export async function registerClientInstallation(
+  installation: Omit<ClientInstallation, 'id' | 'lastSeenAt' | 'workspaceId'> & {
+    workspaceId?: string;
+  }
+): Promise<ClientInstallation> {
+  return withPersistence(
+    () => {
+      const state = getState();
+      const workspaceId = installation.workspaceId ?? state.workspace.id;
+      const existing = state.clientInstallations.find(
+        (item) =>
+          item.workspaceId === workspaceId &&
+          item.clientType === installation.clientType &&
+          item.platform === installation.platform &&
+          item.channel === installation.channel &&
+          item.userId === installation.userId
+      );
+
+      const normalized: ClientInstallation = existing
+        ? {
+            ...existing,
+            version: installation.version,
+            lastSeenAt: new Date().toISOString()
+          }
+        : {
+            id: `install-${randomUUID()}`,
+            workspaceId,
+            userId: installation.userId,
+            clientType: installation.clientType,
+            platform: installation.platform,
+            version: installation.version,
+            channel: installation.channel,
+            lastSeenAt: new Date().toISOString()
+          };
+
+      state.clientInstallations = [
+        normalized,
+        ...state.clientInstallations.filter((item) => item.id !== normalized.id)
+      ];
+
+      if (!existing) {
+        state.auditEvents = [
+          createAuditEvent({
+            event: 'client.installation_registered',
+            actor: installation.userId ?? `Diffmint ${installation.clientType.toUpperCase()}`,
+            target: normalized.id,
+            detail: `Registered ${installation.clientType} ${installation.version} on ${installation.platform}.`
+          }),
+          ...state.auditEvents
+        ];
+      } else if (existing.version !== installation.version) {
+        state.auditEvents = [
+          createAuditEvent({
+            event: 'client.installation_updated',
+            actor: installation.userId ?? `Diffmint ${installation.clientType.toUpperCase()}`,
+            target: normalized.id,
+            detail: `Updated ${installation.clientType} installation to ${installation.version}.`
+          }),
+          ...state.auditEvents
+        ];
+      }
+
+      return clone(normalized);
+    },
+    async (db) => registerClientInstallationPersistent(db, installation)
+  );
+}
+
 export async function getDeviceAuthSession(deviceCode: string): Promise<DeviceAuthSession | null> {
   return withPersistence(
     () => {
@@ -1319,7 +1635,11 @@ export async function getDeviceAuthSession(deviceCode: string): Promise<DeviceAu
         return null;
       }
 
-      if (session.status === 'pending' && new Date(session.expiresAt).getTime() <= Date.now()) {
+      if (
+        session.status !== 'revoked' &&
+        session.status !== 'expired' &&
+        isExpiredTimestamp(session.expiresAt)
+      ) {
         session.status = 'expired';
       }
 
@@ -1336,7 +1656,11 @@ export async function getDeviceAuthSession(deviceCode: string): Promise<DeviceAu
         return null;
       }
 
-      if (row.status === 'pending' && row.expiresAt.getTime() <= Date.now()) {
+      if (
+        row.status !== 'revoked' &&
+        row.status !== 'expired' &&
+        isExpiredTimestamp(row.expiresAt)
+      ) {
         const [expired] = await db
           .update(deviceAuthSessions)
           .set({
@@ -1356,7 +1680,8 @@ export async function getDeviceAuthSession(deviceCode: string): Promise<DeviceAu
 
 export async function approveDeviceAuth(
   deviceCode: string,
-  actorId = 'Devflow Browser Approval'
+  actorId = 'Diffmint Browser Approval',
+  workspaceId?: string
 ): Promise<DeviceAuthSession | null> {
   return withPersistence(
     () => {
@@ -1376,7 +1701,12 @@ export async function approveDeviceAuth(
         return toPublicDeviceSession(session);
       }
 
+      if (workspaceId) {
+        session.workspaceId = workspaceId;
+      }
+
       session.status = 'approved';
+      session.expiresAt = getApprovedDeviceSessionExpiresAt();
       state.usageEvents = [
         {
           id: `usage-${randomUUID()}`,
@@ -1431,18 +1761,22 @@ export async function approveDeviceAuth(
         return mapDeviceSessionFromRow(db, row);
       }
 
+      const targetWorkspaceRow = workspaceId ? await getWorkspaceRow(db, workspaceId) : null;
       const [approved] = await db
         .update(deviceAuthSessions)
         .set({
+          workspaceId: targetWorkspaceRow?.id ?? row.workspaceId,
           status: 'approved',
+          expiresAt: new Date(getApprovedDeviceSessionExpiresAt()),
           updatedAt: new Date()
         })
         .where(eq(deviceAuthSessions.id, row.id))
         .returning();
 
-      const workspaceRow = await getWorkspaceRowByInternalId(db, approved.workspaceId ?? null);
-      const externalWorkspaceId = workspaceRow
-        ? getExternalWorkspaceId(workspaceRow)
+      const approvedWorkspaceRow =
+        targetWorkspaceRow ?? (await getWorkspaceRowByInternalId(db, approved.workspaceId ?? null));
+      const externalWorkspaceId = approvedWorkspaceRow
+        ? getExternalWorkspaceId(approvedWorkspaceRow)
         : workspaceSeed.id;
 
       await db.insert(usageEventsTable).values({
@@ -1475,25 +1809,80 @@ export async function approveDeviceAuth(
 export async function authorizeApprovedDeviceSession(
   deviceCode: string
 ): Promise<{ deviceCode: string; workspaceId: string } | null> {
-  const session = await getDeviceAuthSession(deviceCode);
+  return withPersistence(
+    () => {
+      const state = getState();
+      const session = state.deviceSessions.find((item) => item.deviceCode === deviceCode);
 
-  if (!session || session.status !== 'approved') {
-    return null;
-  }
+      if (!session || session.status !== 'approved') {
+        return null;
+      }
 
-  return {
-    deviceCode: session.deviceCode,
-    workspaceId: session.workspaceId ?? workspaceSeed.id
-  };
+      if (isExpiredTimestamp(session.expiresAt)) {
+        session.status = 'expired';
+        return null;
+      }
+
+      session.expiresAt = getApprovedDeviceSessionExpiresAt();
+
+      return {
+        deviceCode: session.deviceCode,
+        workspaceId: session.workspaceId ?? workspaceSeed.id
+      };
+    },
+    async (db) => {
+      const [row] = await db
+        .select()
+        .from(deviceAuthSessions)
+        .where(eq(deviceAuthSessions.deviceCode, deviceCode))
+        .limit(1);
+
+      if (!row || row.status !== 'approved') {
+        return null;
+      }
+
+      if (isExpiredTimestamp(row.expiresAt)) {
+        await db
+          .update(deviceAuthSessions)
+          .set({
+            status: 'expired',
+            updatedAt: new Date()
+          })
+          .where(eq(deviceAuthSessions.id, row.id));
+
+        return null;
+      }
+
+      const nextExpiresAt = new Date(getApprovedDeviceSessionExpiresAt());
+      const [authorized] = await db
+        .update(deviceAuthSessions)
+        .set({
+          expiresAt: nextExpiresAt,
+          updatedAt: new Date()
+        })
+        .where(eq(deviceAuthSessions.id, row.id))
+        .returning();
+
+      const workspaceRow = await getWorkspaceRowByInternalId(db, authorized.workspaceId ?? null);
+
+      return {
+        deviceCode: authorized.deviceCode,
+        workspaceId: workspaceRow ? getExternalWorkspaceId(workspaceRow) : workspaceSeed.id
+      };
+    }
+  );
 }
 
-export async function startDeviceAuth(workspaceId?: string): Promise<DeviceAuthSession> {
+export async function startDeviceAuth(
+  workspaceId?: string,
+  appUrl?: string
+): Promise<DeviceAuthSession> {
   return withPersistence(
     () => {
       const state = getState();
       const deviceCode = `device_${randomUUID()}`;
       const userCode = `FLOW-${Math.floor(1000 + Math.random() * 9000)}`;
-      const verification = buildDeviceVerificationUri(deviceCode);
+      const verification = buildDeviceVerificationUri(deviceCode, appUrl);
       const session: StoredDeviceAuthSession = {
         deviceCode,
         userCode,
@@ -1513,7 +1902,7 @@ export async function startDeviceAuth(workspaceId?: string): Promise<DeviceAuthS
       const workspaceRow = await getWorkspaceRow(db, workspaceId);
       const deviceCode = `device_${randomUUID()}`;
       const userCode = `FLOW-${Math.floor(1000 + Math.random() * 9000)}`;
-      const verification = buildDeviceVerificationUri(deviceCode);
+      const verification = buildDeviceVerificationUri(deviceCode, appUrl);
 
       await db.insert(deviceAuthSessions).values({
         workspaceId: workspaceRow.id,
@@ -1560,7 +1949,7 @@ export async function pollDeviceAuth(deviceCode: string): Promise<DeviceAuthSess
       }
 
       if (session.autoApproveOnPoll) {
-        return approveDeviceAuth(deviceCode, 'Devflow Control Plane');
+        return approveDeviceAuth(deviceCode, 'Diffmint Control Plane');
       }
 
       return toPublicDeviceSession(session);
@@ -1596,7 +1985,7 @@ export async function pollDeviceAuth(deviceCode: string): Promise<DeviceAuthSess
       }
 
       if (shouldAutoApproveDeviceFlow()) {
-        return approveDeviceAuth(deviceCode, 'Devflow Control Plane');
+        return approveDeviceAuth(deviceCode, 'Diffmint Control Plane');
       }
 
       return mappedSession;
@@ -1618,7 +2007,7 @@ export async function revokeDeviceAuth(deviceCode: string): Promise<DeviceAuthSe
       state.auditEvents = [
         createAuditEvent({
           event: 'device.auth_revoked',
-          actor: 'Devflow Control Plane',
+          actor: 'Diffmint Control Plane',
           target: session.deviceCode,
           detail: `Revoked device auth for workspace ${session.workspaceId ?? state.workspace.id}.`
         }),
@@ -1647,7 +2036,7 @@ export async function revokeDeviceAuth(deviceCode: string): Promise<DeviceAuthSe
         : workspaceSeed.id;
 
       await appendAuditEventPersistent(db, externalWorkspaceId, {
-        actorId: 'Devflow Control Plane',
+        actorId: 'Diffmint Control Plane',
         event: 'device.auth_revoked',
         targetType: 'device_auth_session',
         targetId: revoked.deviceCode,
@@ -1676,5 +2065,5 @@ export async function applyPolarWebhookPayload(payload: unknown): Promise<void> 
 }
 
 export function resetControlPlaneState(): void {
-  globalThis.__devflowControlPlaneState = createSeedState();
+  globalThis.__diffmintControlPlaneState = createSeedState();
 }

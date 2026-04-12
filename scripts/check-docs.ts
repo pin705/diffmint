@@ -20,14 +20,14 @@ for (const doc of docs) {
 }
 
 const allowedCommandPrefixes = [
-  'devflow auth login',
-  'devflow auth logout',
-  'devflow config set-provider',
-  'devflow review',
-  'devflow explain',
-  'devflow tests',
-  'devflow history',
-  'devflow doctor',
+  'dm auth login',
+  'dm auth logout',
+  'dm config set-provider',
+  'dm review',
+  'dm explain',
+  'dm tests',
+  'dm history',
+  'dm doctor',
   'pnpm install',
   'pnpm docker:dev',
   'pnpm docker:dev:logs',
@@ -47,7 +47,7 @@ for (const doc of docs) {
     for (const line of lines) {
       const normalized = line.replace(/\s+/g, ' ');
       if (
-        normalized.startsWith('devflow ') &&
+        normalized.startsWith('diffmint ') &&
         !allowedCommandPrefixes.some((prefix) => normalized.startsWith(prefix))
       ) {
         errors.push(`Unknown CLI example in ${doc.slug}: ${normalized}`);

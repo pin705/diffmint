@@ -1,0 +1,19 @@
+---
+title: VS Code hardening and packaging
+description: The VS Code extension now supports configurable CLI and web endpoints, live workspace/history views, and a packageable VSIX workflow.
+section: Changelog
+order: 140
+surfaces:
+  - vscode
+  - cli
+related:
+  - /docs/vscode/guide
+  - /docs/getting-started/install-vscode-extension
+---
+
+# VS Code hardening and packaging
+
+- The extension now reads local Diffmint workspace and history state into the activity bar views.
+- Teams can configure `diffmint.cliPath` and `diffmint.webBaseUrl` instead of relying on hardcoded defaults.
+- Explorer and editor context menus now expose the most common Diffmint actions directly where code is selected.
+- The extension package now includes a VSIX packaging script and package metadata suitable for release workflows.

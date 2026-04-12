@@ -1,19 +1,22 @@
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type {
+  ClientInstallation,
   DeviceAuthSession,
   ReviewSession,
   UsageEvent,
   WorkspaceBootstrap
-} from '@devflow/contracts';
+} from '@diffmint/contracts';
 import {
   buildReviewRequest,
-  createReviewSession,
+  createReviewSessionWithRuntime,
   renderMarkdownSession,
   renderTerminalSession,
   runDoctor
-} from '@devflow/review-core';
+} from '@diffmint/review-core';
+import { sanitizeReviewSessionForCloudSync } from '@diffmint/review-core';
 
 interface LocalConfig {
   apiBaseUrl?: string;
@@ -30,12 +33,29 @@ interface LocalConfig {
   signedInAt?: string;
 }
 
-const DEVFLOW_HOME = path.join(homedir(), '.devflow');
-const CONFIG_PATH = path.join(DEVFLOW_HOME, 'config.json');
-const HISTORY_PATH = path.join(DEVFLOW_HOME, 'history.jsonl');
+interface SyncQueueEntry {
+  id: string;
+  workspaceId: string;
+  pathname: '/api/client/history' | '/api/client/usage';
+  body: ReviewSession | Omit<UsageEvent, 'id' | 'createdAt'>;
+}
+
+const DIFFMINT_HOME = path.join(homedir(), '.diffmint');
+const CONFIG_PATH = path.join(DIFFMINT_HOME, 'config.json');
+const HISTORY_PATH = path.join(DIFFMINT_HOME, 'history.jsonl');
+const SYNC_QUEUE_PATH = path.join(DIFFMINT_HOME, 'sync-queue.json');
+const CLI_VERSION = (() => {
+  try {
+    const packageJsonUrl = new URL('../package.json', import.meta.url);
+    const packageJson = JSON.parse(readFileSync(packageJsonUrl, 'utf8')) as { version?: string };
+    return packageJson.version ?? '0.1.0';
+  } catch {
+    return '0.1.0';
+  }
+})();
 
 function ensureHome(): void {
-  mkdirSync(DEVFLOW_HOME, { recursive: true });
+  mkdirSync(DIFFMINT_HOME, { recursive: true });
 }
 
 function readConfig(): LocalConfig {
@@ -72,18 +92,47 @@ function readHistory(): unknown[] {
     .map((line) => JSON.parse(line));
 }
 
+function readSyncQueue(): SyncQueueEntry[] {
+  ensureHome();
+  if (!existsSync(SYNC_QUEUE_PATH)) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(readFileSync(SYNC_QUEUE_PATH, 'utf8')) as unknown;
+    return Array.isArray(parsed) ? (parsed as SyncQueueEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSyncQueue(entries: SyncQueueEntry[]): void {
+  ensureHome();
+  writeFileSync(SYNC_QUEUE_PATH, JSON.stringify(entries, null, 2) + '\n', 'utf8');
+}
+
+function getSyncQueueSize(): number {
+  return readSyncQueue().length;
+}
+
+function appendSyncQueue(entries: SyncQueueEntry[]): number {
+  const nextEntries = [...readSyncQueue(), ...entries];
+  writeSyncQueue(nextEntries);
+  return nextEntries.length;
+}
+
 function printHelp(): void {
-  console.log(`Devflow CLI
+  console.log(`Diffmint CLI
 
 Usage:
-  devflow auth login
-  devflow auth logout
-  devflow config set-provider <provider>
-  devflow review [--staged] [--base <ref>] [--files <a> <b>] [--json] [--markdown]
-  devflow explain <file>
-  devflow tests <file>
-  devflow history
-  devflow doctor
+  dm auth login
+  dm auth logout
+  dm config set-provider <provider>
+  dm review [--staged] [--base <ref>] [--files <a> <b>] [--json] [--markdown]
+  dm explain <file>
+  dm tests <file>
+  dm history
+  dm doctor
 `);
 }
 
@@ -146,12 +195,13 @@ function output(data: string | object, asJson: boolean): void {
 }
 
 function getApiBaseUrl(config: LocalConfig): string {
-  return config.apiBaseUrl ?? process.env.DEVFLOW_API_BASE_URL ?? 'http://localhost:3000';
+  return config.apiBaseUrl ?? process.env.DIFFMINT_API_BASE_URL ?? 'https://diffmint.io';
 }
 
 async function readJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let detail = `${response.status} ${response.statusText}`;
+    const requestId = response.headers.get('x-diffmint-request-id');
 
     try {
       const payload = (await response.json()) as { error?: string };
@@ -160,6 +210,10 @@ async function readJson<T>(response: Response): Promise<T> {
       }
     } catch {
       // Ignore invalid JSON and fall back to HTTP status detail.
+    }
+
+    if (requestId) {
+      detail = `${detail} (request: ${requestId})`;
     }
 
     throw new Error(detail);
@@ -218,11 +272,50 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+function getClientChannel(): ClientInstallation['channel'] {
+  const value = process.env.DIFFMINT_RELEASE_CHANNEL;
+
+  if (value === 'preview' || value === 'canary') {
+    return value;
+  }
+
+  return 'stable';
+}
+
+function buildClientInstallationPayload(): Omit<
+  ClientInstallation,
+  'id' | 'lastSeenAt' | 'workspaceId'
+> {
+  return {
+    clientType: 'cli',
+    platform: `${process.platform}-${process.arch}`,
+    version: CLI_VERSION,
+    channel: getClientChannel()
+  };
+}
+
+async function registerClientInstallationRemote(config: LocalConfig): Promise<void> {
+  if (!config.workspace || !config.lastDeviceCode) {
+    return;
+  }
+
+  try {
+    await postApi(
+      getApiBaseUrl(config),
+      '/api/client/installations',
+      buildClientInstallationPayload(),
+      config
+    );
+  } catch {
+    // Keep CLI login and local workflows resilient if telemetry registration fails.
+  }
+}
+
 async function waitForDeviceApproval(
   baseUrl: string,
   session: DeviceAuthSession
 ): Promise<DeviceAuthSession> {
-  const timeoutMs = Number(process.env.DEVFLOW_DEVICE_AUTH_TIMEOUT_MS ?? 10_000);
+  const timeoutMs = Number(process.env.DIFFMINT_DEVICE_AUTH_TIMEOUT_MS ?? 10_000);
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
@@ -265,8 +358,7 @@ async function tryRemoteLogin(config: LocalConfig): Promise<LocalConfig> {
       lastDeviceCode: approvedSession.deviceCode
     }
   );
-
-  return {
+  const nextConfig = {
     ...config,
     apiBaseUrl,
     provider: bootstrap.provider.provider,
@@ -280,7 +372,11 @@ async function tryRemoteLogin(config: LocalConfig): Promise<LocalConfig> {
     syncDefaults: bootstrap.syncDefaults,
     lastDeviceCode: approvedSession.deviceCode,
     signedInAt: new Date().toISOString()
-  };
+  } satisfies LocalConfig;
+
+  await registerClientInstallationRemote(nextConfig);
+
+  return nextConfig;
 }
 
 function buildLocalFallbackConfig(config: LocalConfig): LocalConfig {
@@ -296,31 +392,151 @@ function buildLocalFallbackConfig(config: LocalConfig): LocalConfig {
   };
 }
 
-async function syncReviewToCloud(config: LocalConfig, session: ReviewSession): Promise<void> {
+function buildSyncQueueEntries(config: LocalConfig, session: ReviewSession): SyncQueueEntry[] {
+  if (!config.workspace) {
+    return [];
+  }
+
+  const syncedSession =
+    config.syncDefaults?.redactionEnabled === false
+      ? session
+      : sanitizeReviewSessionForCloudSync(session);
+  const reviewPayload: ReviewSession = {
+    ...syncedSession,
+    workspaceId: config.workspace.id
+  };
+  const usagePayload: Omit<UsageEvent, 'id' | 'createdAt'> = {
+    workspaceId: config.workspace.id,
+    source: session.commandSource,
+    event: 'sync.uploaded',
+    metadata: {
+      traceId: session.traceId
+    }
+  };
+
+  return [
+    {
+      id: `sync-${randomUUID()}`,
+      workspaceId: config.workspace.id,
+      pathname: '/api/client/history',
+      body: reviewPayload
+    },
+    {
+      id: `sync-${randomUUID()}`,
+      workspaceId: config.workspace.id,
+      pathname: '/api/client/usage',
+      body: usagePayload
+    }
+  ];
+}
+
+async function flushSyncQueue(
+  config: LocalConfig
+): Promise<{ flushed: number; remaining: number; error?: string }> {
+  const queuedEntries = readSyncQueue();
+
+  if (
+    queuedEntries.length === 0 ||
+    !config.workspace ||
+    config.syncDefaults?.cloudSyncEnabled === false
+  ) {
+    return {
+      flushed: 0,
+      remaining: queuedEntries.length
+    };
+  }
+
+  const apiBaseUrl = getApiBaseUrl(config);
+  const nextQueue: SyncQueueEntry[] = [];
+  let flushed = 0;
+
+  for (let index = 0; index < queuedEntries.length; index += 1) {
+    const entry = queuedEntries[index];
+
+    if (entry.workspaceId !== config.workspace.id) {
+      nextQueue.push(entry);
+      continue;
+    }
+
+    try {
+      await postApi(apiBaseUrl, entry.pathname, entry.body, config);
+      flushed += 1;
+    } catch (error) {
+      nextQueue.push(entry, ...queuedEntries.slice(index + 1));
+      writeSyncQueue(nextQueue);
+      return {
+        flushed,
+        remaining: nextQueue.length,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  writeSyncQueue(nextQueue);
+
+  return {
+    flushed,
+    remaining: nextQueue.length
+  };
+}
+
+async function syncReviewToCloud(
+  config: LocalConfig,
+  session: ReviewSession
+): Promise<{ flushed: number; queued: boolean; queueSize: number }> {
   if (!config.workspace || config.syncDefaults?.cloudSyncEnabled === false) {
-    return;
+    return {
+      flushed: 0,
+      queued: false,
+      queueSize: getSyncQueueSize()
+    };
+  }
+
+  const flushResult = await flushSyncQueue(config);
+  if (flushResult.error) {
+    const queueSize = appendSyncQueue(buildSyncQueueEntries(config, session));
+    throw new Error(
+      `Queued review for later sync: ${flushResult.error}. ${queueSize} queued item(s) waiting.`
+    );
   }
 
   const apiBaseUrl = getApiBaseUrl(config);
   const payload: ReviewSession = {
-    ...session,
+    ...(config.syncDefaults?.redactionEnabled === false
+      ? session
+      : sanitizeReviewSessionForCloudSync(session)),
     workspaceId: config.workspace.id
   };
 
-  await postApi(apiBaseUrl, '/api/client/history', payload, config);
-  await postApi<UsageEvent>(
-    apiBaseUrl,
-    '/api/client/usage',
-    {
-      workspaceId: config.workspace.id,
-      source: session.commandSource,
-      event: 'sync.uploaded',
-      metadata: {
-        traceId: session.traceId
-      }
-    },
-    config
-  );
+  try {
+    await postApi(apiBaseUrl, '/api/client/history', payload, config);
+    await postApi<UsageEvent>(
+      apiBaseUrl,
+      '/api/client/usage',
+      {
+        workspaceId: config.workspace.id,
+        source: session.commandSource,
+        event: 'sync.uploaded',
+        metadata: {
+          traceId: session.traceId
+        }
+      },
+      config
+    );
+  } catch (error) {
+    const queueSize = appendSyncQueue(buildSyncQueueEntries(config, session));
+    throw new Error(
+      `Queued review for later sync: ${
+        error instanceof Error ? error.message : String(error)
+      }. ${queueSize} queued item(s) waiting.`
+    );
+  }
+
+  return {
+    flushed: flushResult.flushed,
+    queued: false,
+    queueSize: flushResult.remaining
+  };
 }
 
 async function loadHistory(config: LocalConfig): Promise<unknown[]> {
@@ -329,6 +545,7 @@ async function loadHistory(config: LocalConfig): Promise<unknown[]> {
   }
 
   try {
+    await flushSyncQueue(config);
     const payload = await fetchApi<{ items: unknown[] }>(
       getApiBaseUrl(config),
       '/api/client/history',
@@ -343,6 +560,7 @@ async function loadHistory(config: LocalConfig): Promise<unknown[]> {
 
 async function extendDoctorOutput(config: LocalConfig): Promise<unknown[]> {
   const checks = runDoctor(process.cwd());
+  const queueSize = getSyncQueueSize();
   const extendedChecks = [
     ...checks,
     {
@@ -351,7 +569,16 @@ async function extendDoctorOutput(config: LocalConfig): Promise<unknown[]> {
       status: config.signedInAt ? 'ok' : 'warn',
       detail: config.signedInAt
         ? `Signed in to ${config.workspace?.name ?? 'unknown workspace'}`
-        : 'Run `devflow auth login` to connect a workspace.'
+        : 'Run `dm auth login` to connect a workspace.'
+    },
+    {
+      id: 'sync-queue',
+      label: 'Sync queue',
+      status: queueSize === 0 ? 'ok' : 'warn',
+      detail:
+        queueSize === 0
+          ? 'No queued sync items.'
+          : `${queueSize} queued sync item(s) waiting for the control plane.`
     }
   ];
 
@@ -404,7 +631,7 @@ function explainFile(target: string): string {
     `- Lines: ${lineCount}`,
     `- Exports: ${exportCount}`,
     `- Runtime: ${isClient ? 'client component or browser-aware module' : 'server or shared module'}`,
-    `- Suggested next step: run \`devflow tests ${target}\` if this file changes behavior or contracts.`
+    `- Suggested next step: run \`dm tests ${target}\` if this file changes behavior or contracts.`
   ].join('\n');
 }
 
@@ -443,7 +670,16 @@ async function main() {
     }
 
     writeConfig(nextConfig);
-    console.log(`Signed in to Devflow.`);
+    if (nextConfig.workspace && nextConfig.syncDefaults?.cloudSyncEnabled !== false) {
+      const flushResult = await flushSyncQueue(nextConfig);
+      if (flushResult.flushed > 0) {
+        console.log(`Flushed ${flushResult.flushed} queued sync item(s).`);
+      }
+      if (flushResult.error) {
+        console.log(`Queued sync items still pending: ${flushResult.error}`);
+      }
+    }
+    console.log(`Signed in to Diffmint.`);
     console.log(`Workspace: ${nextConfig.workspace?.name}`);
     console.log(`Control plane: ${nextConfig.apiBaseUrl}`);
     if (nextConfig.policyVersionId) {
@@ -474,7 +710,7 @@ async function main() {
     }
 
     writeConfig({});
-    console.log('Signed out from Devflow.');
+    console.log('Signed out from Diffmint.');
     return;
   }
 
@@ -497,6 +733,20 @@ async function main() {
     const flags = parseFlags([subcommand, ...rest].filter(Boolean));
     const source =
       flags.files.length > 0 ? 'selected_files' : flags.baseRef ? 'branch_compare' : 'local_diff';
+    const policy = config.policyVersionId
+      ? {
+          workspaceId: config.workspace?.id ?? 'ws_local',
+          policySetId: 'seed-policy',
+          policyVersionId: config.policyVersionId,
+          name: 'Workspace Policy',
+          version: config.policyVersionId,
+          checksum: config.policyVersionId,
+          publishedAt: new Date().toISOString(),
+          summary: 'Workspace policy metadata loaded from the control plane.',
+          checklist: [],
+          rules: []
+        }
+      : undefined;
     const request = buildReviewRequest({
       cwd: process.cwd(),
       source,
@@ -509,31 +759,27 @@ async function main() {
       cloudSyncEnabled: config.syncDefaults?.cloudSyncEnabled ?? Boolean(config.workspace),
       provider: config.provider ?? 'qwen',
       model: 'qwen-code',
-      policy: config.policyVersionId
-        ? {
-            workspaceId: config.workspace?.id ?? 'ws_local',
-            policySetId: 'seed-policy',
-            policyVersionId: config.policyVersionId,
-            name: 'Workspace Policy',
-            version: config.policyVersionId,
-            checksum: config.policyVersionId,
-            publishedAt: new Date().toISOString(),
-            summary: 'Workspace policy metadata loaded from the control plane.',
-            checklist: [],
-            rules: []
-          }
-        : undefined
+      policy
     });
-    const session = createReviewSession(request);
+    const session = await createReviewSessionWithRuntime(request, {
+      cwd: process.cwd(),
+      provider: config.provider ?? 'qwen',
+      model: 'qwen-code',
+      policy
+    });
     appendHistory(session);
 
     if (!request.localOnly && request.cloudSyncEnabled) {
       try {
         await syncReviewToCloud(config, session);
       } catch (error) {
-        console.log(
-          `Cloud sync skipped: ${error instanceof Error ? error.message : String(error)}`
-        );
+        const message = `Cloud sync skipped: ${error instanceof Error ? error.message : String(error)}`;
+
+        if (flags.json) {
+          console.error(message);
+        } else {
+          console.log(message);
+        }
       }
     }
 

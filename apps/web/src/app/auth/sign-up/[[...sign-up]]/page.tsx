@@ -1,5 +1,7 @@
 import { Metadata } from 'next';
+import { AuthConfigNotice } from '@/features/auth/components/auth-config-notice';
 import SignUpViewPage from '@/features/auth/components/sign-up-view';
+import { isClerkEnabled } from '@/lib/clerk/flags';
 
 export const metadata: Metadata = {
   title: 'Authentication | Sign Up',
@@ -7,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
+  if (!isClerkEnabled()) {
+    return <AuthConfigNotice mode='sign-up' />;
+  }
+
   return <SignUpViewPage />;
 }

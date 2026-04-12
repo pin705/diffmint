@@ -17,7 +17,7 @@ describe('polar billing integration helpers', () => {
     process.env.POLAR_PRODUCT_ID_PRO = 'prod_pro';
     process.env.POLAR_PRODUCT_ID_TEAM = 'prod_team';
     process.env.POLAR_PRODUCT_ID_ENTERPRISE = 'prod_enterprise';
-    process.env.DEVFLOW_APP_URL = 'http://localhost:3000';
+    process.env.DIFFMINT_APP_URL = 'http://localhost:3000';
   });
 
   afterEach(() => {
@@ -27,12 +27,12 @@ describe('polar billing integration helpers', () => {
   it('reads env-backed Polar configuration and builds checkout urls', () => {
     const config = getPolarConfig();
     const checkoutUrl = buildPolarCheckoutUrl({
-      workspaceId: 'ws_devflow_core',
+      workspaceId: 'ws_diffmint_core',
       customerExternalId: 'org_123',
-      customerName: 'Devflow Core',
+      customerName: 'Diffmint Core',
       planKey: 'team'
     });
-    const portalUrl = buildPolarPortalUrl('cus_devflow_core');
+    const portalUrl = buildPolarPortalUrl('cus_diffmint_core');
 
     expect(config.server).toBe('sandbox');
     expect(config.productIds.team).toBe('prod_team');
@@ -40,14 +40,14 @@ describe('polar billing integration helpers', () => {
     expect(checkoutUrl).toContain('/api/polar/checkout');
     expect(checkoutUrl).toContain('products=prod_team');
     expect(checkoutUrl).toContain('customerExternalId=org_123');
-    expect(portalUrl).toBe('http://localhost:3000/api/polar/portal?customerId=cus_devflow_core');
+    expect(portalUrl).toBe('http://localhost:3000/api/polar/portal?customerId=cus_diffmint_core');
   });
 
   it('returns a workspace summary with Polar checkout targets', async () => {
     const adapter = new PolarBillingAdapter();
     const summary = await adapter.getWorkspaceSummary({
-      workspaceId: 'ws_devflow_core',
-      workspaceName: 'Devflow Core',
+      workspaceId: 'ws_diffmint_core',
+      workspaceName: 'Diffmint Core',
       customerExternalId: 'org_123'
     });
 

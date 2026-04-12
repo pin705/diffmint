@@ -6,7 +6,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   buildReviewRequest,
   createReviewSession,
+  createReviewSessionWithRuntime,
   renderMarkdownSession,
+  sanitizeReviewSessionForCloudSync,
   runDoctor
 } from '../../packages/review-core/src/index.ts';
 
@@ -29,12 +31,12 @@ function createRepoWithChangedFile(filePath = 'src/auth/route.ts'): {
   repoDir: string;
   filePath: string;
 } {
-  const repoDir = makeTempDir('devflow-review-core-');
+  const repoDir = makeTempDir('diffmint-review-core-');
   const absoluteFilePath = path.join(repoDir, filePath);
 
   runGit(repoDir, ['init']);
-  runGit(repoDir, ['config', 'user.email', 'devflow@example.com']);
-  runGit(repoDir, ['config', 'user.name', 'Devflow Tests']);
+  runGit(repoDir, ['config', 'user.email', 'team@diffmint.io']);
+  runGit(repoDir, ['config', 'user.name', 'Diffmint Tests']);
 
   mkdirSync(path.dirname(absoluteFilePath), { recursive: true });
   writeFileSync(absoluteFilePath, 'export const GET = () => new Response("ok");\n', 'utf8');
@@ -87,13 +89,185 @@ describe('review core', () => {
     expect(session.provider).toBe('qwen-enterprise');
     expect(session.severityCounts.high).toBe(1);
     expect(session.severityCounts.medium).toBeGreaterThanOrEqual(1);
-    expect(markdown).toContain('# Devflow Review');
+    expect(markdown).toContain('# Diffmint Review');
     expect(markdown).toContain('Sensitive control-plane surface changed');
   });
 
+  it('redacts sensitive values and omits raw provider output for cloud sync', () => {
+    const sanitized = sanitizeReviewSessionForCloudSync({
+      id: 'review-redacted',
+      traceId: 'trace-redacted',
+      requestId: 'request-redacted',
+      source: 'selected_files',
+      commandSource: 'cli',
+      provider: 'qwen',
+      model: 'qwen-code',
+      status: 'completed',
+      findings: [
+        {
+          id: 'finding-redacted',
+          severity: 'high',
+          title: 'Leaked token sk_live_12345678901234567890',
+          summary: 'Authorization header was Bearer token-value-1234567890',
+          suggestedAction: 'Rotate api_key=secret-value immediately.'
+        }
+      ],
+      summary: 'Found github_pat_123456789012345678901234567890 in the report.',
+      severityCounts: {
+        low: 0,
+        medium: 0,
+        high: 1,
+        critical: 0
+      },
+      durationMs: 100,
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      artifacts: [
+        {
+          id: 'artifact-raw',
+          kind: 'raw-provider-output',
+          label: 'Qwen Headless Output',
+          mimeType: 'application/json',
+          content: '{"apiKey":"sk_live_12345678901234567890"}',
+          storageKey: 'provider-output/sk_live_12345678901234567890'
+        },
+        {
+          id: 'artifact-terminal',
+          kind: 'terminal',
+          label: 'Terminal Summary',
+          mimeType: 'text/plain',
+          content: 'Bearer token-value-1234567890\nclient_secret=abc123'
+        }
+      ]
+    });
+
+    expect(sanitized.summary).toContain('[REDACTED GITHUB TOKEN]');
+    expect(sanitized.findings[0]?.title).toContain('[REDACTED API KEY]');
+    expect(sanitized.findings[0]?.summary).toContain('Bearer [REDACTED]');
+    expect(sanitized.findings[0]?.suggestedAction).toContain('api_key=[REDACTED]');
+    expect(sanitized.artifacts[0]?.content).toBe(
+      '[REDACTED raw provider output omitted from cloud sync]'
+    );
+    expect(sanitized.artifacts[0]?.mimeType).toBe('text/plain');
+    expect(sanitized.artifacts[1]?.content).toContain('Bearer [REDACTED]');
+    expect(sanitized.artifacts[1]?.content).toContain('client_secret=[REDACTED]');
+  });
+
+  it('keeps runtime execution deterministic in scaffold mode', async () => {
+    const originalRuntime = process.env.DIFFMINT_REVIEW_RUNTIME;
+    process.env.DIFFMINT_REVIEW_RUNTIME = 'scaffold';
+
+    const { repoDir, filePath } = createRepoWithChangedFile();
+
+    try {
+      const request = buildReviewRequest({
+        cwd: repoDir,
+        source: 'selected_files',
+        files: [filePath]
+      });
+      const session = await createReviewSessionWithRuntime(request, {
+        cwd: repoDir
+      });
+
+      expect(session.summary).toContain('Generated');
+      expect(session.severityCounts.high).toBe(1);
+      expect(session.artifacts.some((artifact) => artifact.kind === 'raw-provider-output')).toBe(
+        false
+      );
+    } finally {
+      if (originalRuntime === undefined) {
+        delete process.env.DIFFMINT_REVIEW_RUNTIME;
+      } else {
+        process.env.DIFFMINT_REVIEW_RUNTIME = originalRuntime;
+      }
+    }
+  });
+
+  it('uses the Qwen headless runtime when a compatible binary is available', async () => {
+    const originalRuntime = process.env.DIFFMINT_REVIEW_RUNTIME;
+    const originalPath = process.env.PATH;
+    process.env.DIFFMINT_REVIEW_RUNTIME = 'qwen';
+
+    const { repoDir, filePath } = createRepoWithChangedFile('src/feature.ts');
+    const binDir = makeTempDir('diffmint-qwen-bin-');
+    const qwenPath = path.join(binDir, 'qwen');
+
+    writeFileSync(
+      qwenPath,
+      [
+        '#!/bin/sh',
+        'if [ "$1" = "--version" ]; then',
+        '  echo "qwen test 0.0.1"',
+        '  exit 0',
+        'fi',
+        'cat >/dev/null',
+        `printf '%s' '${JSON.stringify([
+          {
+            type: 'assistant',
+            message: {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({
+                    summary: 'Runtime review completed through Qwen headless mode.',
+                    findings: [
+                      {
+                        severity: 'critical',
+                        title: 'Runtime finding',
+                        summary: 'The mocked Qwen runtime produced a structured finding.',
+                        filePath,
+                        suggestedAction: 'Add verification before merge.'
+                      }
+                    ]
+                  })
+                }
+              ]
+            }
+          }
+        ])}'`
+      ].join('\n'),
+      { encoding: 'utf8', mode: 0o755 }
+    );
+
+    process.env.PATH = `${binDir}:${originalPath ?? ''}`;
+
+    try {
+      const request = buildReviewRequest({
+        cwd: repoDir,
+        source: 'selected_files',
+        files: [filePath],
+        provider: 'qwen'
+      });
+      const session = await createReviewSessionWithRuntime(request, {
+        cwd: repoDir,
+        provider: 'qwen',
+        model: 'qwen-code'
+      });
+
+      expect(session.summary).toBe('Runtime review completed through Qwen headless mode.');
+      expect(session.severityCounts.critical).toBe(1);
+      expect(session.findings[0]?.title).toBe('Runtime finding');
+      expect(session.artifacts.some((artifact) => artifact.kind === 'raw-provider-output')).toBe(
+        true
+      );
+    } finally {
+      if (originalRuntime === undefined) {
+        delete process.env.DIFFMINT_REVIEW_RUNTIME;
+      } else {
+        process.env.DIFFMINT_REVIEW_RUNTIME = originalRuntime;
+      }
+
+      if (originalPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = originalPath;
+      }
+    }
+  });
+
   it('reports the configured API base URL in doctor output', () => {
-    const originalBaseUrl = process.env.DEVFLOW_API_BASE_URL;
-    process.env.DEVFLOW_API_BASE_URL = 'http://localhost:3000';
+    const originalBaseUrl = process.env.DIFFMINT_API_BASE_URL;
+    process.env.DIFFMINT_API_BASE_URL = 'http://localhost:3000';
 
     try {
       const checks = runDoctor(process.cwd());
@@ -105,9 +279,9 @@ describe('review core', () => {
       expect(apiCheck?.detail).toBe('http://localhost:3000');
     } finally {
       if (originalBaseUrl === undefined) {
-        delete process.env.DEVFLOW_API_BASE_URL;
+        delete process.env.DIFFMINT_API_BASE_URL;
       } else {
-        process.env.DEVFLOW_API_BASE_URL = originalBaseUrl;
+        process.env.DIFFMINT_API_BASE_URL = originalBaseUrl;
       }
     }
   });

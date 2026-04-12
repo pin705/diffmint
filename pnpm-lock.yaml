@@ -44,10 +44,10 @@ importers:
 
   apps/cli:
     dependencies:
-      '@devflow/contracts':
+      '@diffmint/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@devflow/review-core':
+      '@diffmint/review-core':
         specifier: workspace:*
         version: link:../../packages/review-core
 
@@ -71,16 +71,16 @@ importers:
       '@clerk/themes':
         specifier: ^2.4.57
         version: 2.4.57(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@devflow/contracts':
+      '@diffmint/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@devflow/docs-content':
+      '@diffmint/docs-content':
         specifier: workspace:*
         version: link:../../packages/docs-content
-      '@devflow/policy-engine':
+      '@diffmint/policy-engine':
         specifier: workspace:*
         version: link:../../packages/policy-engine
-      '@devflow/review-core':
+      '@diffmint/review-core':
         specifier: workspace:*
         version: link:../../packages/review-core
       '@polar-sh/nextjs':
@@ -290,16 +290,16 @@ importers:
 
   packages/policy-engine:
     dependencies:
-      '@devflow/contracts':
+      '@diffmint/contracts':
         specifier: workspace:*
         version: link:../contracts
 
   packages/review-core:
     dependencies:
-      '@devflow/contracts':
+      '@diffmint/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@devflow/policy-engine':
+      '@diffmint/policy-engine':
         specifier: workspace:*
         version: link:../policy-engine
 

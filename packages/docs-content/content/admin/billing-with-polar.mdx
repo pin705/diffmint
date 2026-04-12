@@ -14,7 +14,7 @@ related:
 
 # Billing with Polar
 
-Devflow uses Polar for plan checkout, subscriptions, invoices, and customer portal access.
+Diffmint uses Polar for plan checkout, subscriptions, invoices, and customer portal access.
 
 ## Required environment variables
 
@@ -22,10 +22,11 @@ Devflow uses Polar for plan checkout, subscriptions, invoices, and customer port
 POLAR_SERVER=sandbox
 POLAR_ACCESS_TOKEN=polar_oat_...
 POLAR_WEBHOOK_SECRET=polar_whsec_...
+POLAR_WEBHOOK_MAX_BYTES=262144
 POLAR_PRODUCT_ID_PRO=...
 POLAR_PRODUCT_ID_TEAM=...
 POLAR_PRODUCT_ID_ENTERPRISE=...
-DEVFLOW_APP_URL=http://localhost:3000
+DIFFMINT_APP_URL=https://diffmint.io
 ```
 
 ## Billing routes
@@ -47,3 +48,7 @@ DEVFLOW_APP_URL=http://localhost:3000
 - Keep plan IDs aligned with seat and credit expectations shown in the control plane.
 - Use sandbox first, then switch `POLAR_SERVER=production` only when live credentials are ready.
 - Link the workspace to a Polar customer ID before relying on the customer portal route.
+- Diffmint deduplicates repeated Polar webhook deliveries before mutating billing state, so provider
+  retries do not create duplicate audit noise or double-apply seat updates.
+- The webhook route requires the signed Polar headers, emits a request id on every response, and
+  rejects oversized payloads before handing control to the adapter.

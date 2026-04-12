@@ -10,7 +10,7 @@ export const overviewInfoContent: InfobarContent = {
     {
       title: 'Control plane, not review surface',
       description:
-        'Devflow keeps the primary review workflow in the CLI and VS Code. The dashboard manages workspace settings, policies, billing, history, audit, and docs.',
+        'Diffmint keeps the primary review workflow in the CLI and VS Code. The dashboard manages workspace settings, policies, billing, history, audit, and docs.',
       links: [
         link('5-Minute Quickstart', '/docs/getting-started/5-minute-quickstart'),
         link('Architecture', '/docs/concepts/architecture')
@@ -85,7 +85,7 @@ export const policiesInfoContent: InfobarContent = {
     {
       title: 'Versioned governance',
       description:
-        'Devflow differentiates on governed review. Policy versions define the checklist and rules attached to synced sessions.',
+        'Diffmint differentiates on governed review. Policy versions define the checklist and rules attached to synced sessions.',
       links: [
         link('Policies and Governance', '/docs/concepts/workspaces-policies-and-governance'),
         link('CLI Reference', '/docs/cli/reference')

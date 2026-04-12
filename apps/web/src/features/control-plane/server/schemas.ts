@@ -10,7 +10,9 @@ export const reviewSourceSchema = z.enum([
   'commit_range'
 ]);
 export const commandSourceSchema = z.enum(['cli', 'vscode', 'web']);
+export const clientTypeSchema = z.enum(['cli', 'vscode']);
 export const reviewStatusSchema = z.enum(['queued', 'running', 'completed', 'failed']);
+export const releaseChannelSchema = z.enum(['stable', 'preview', 'canary']);
 export const artifactKindSchema = z.enum([
   'markdown',
   'json',
@@ -92,4 +94,13 @@ export const deviceAuthStartSchema = z.object({
 
 export const deviceAuthActionSchema = z.object({
   deviceCode: z.string().min(1)
+});
+
+export const clientInstallationInputSchema = z.object({
+  workspaceId: z.string().optional(),
+  userId: z.string().optional(),
+  clientType: clientTypeSchema,
+  platform: z.string().min(1),
+  version: z.string().min(1),
+  channel: releaseChannelSchema.default('stable')
 });

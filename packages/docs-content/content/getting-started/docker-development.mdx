@@ -1,6 +1,6 @@
 ---
 title: Docker Development
-description: Run Devflow with Docker Compose, Postgres, pnpm, and hot reload in one command.
+description: Run Diffmint with Docker Compose, Postgres, pnpm, and hot reload in one command.
 section: Getting Started
 order: 15
 surfaces:
@@ -28,8 +28,11 @@ This brings up:
 - `web` on `http://localhost:3000`
 - `postgres` on `localhost:5432`
 
-The web container now runs database migrations and the idempotent Devflow seed before starting the
+The web container now runs database migrations and the idempotent Diffmint seed before starting the
 Next.js dev server, so the control plane is ready on first boot.
+
+The Docker stack also probes `http://127.0.0.1:3000/api/health/ready`, which means container health
+now reflects both the web runtime and the control-plane readiness checks.
 
 Make sure Docker Desktop or your local Docker daemon is running before you start the stack.
 
@@ -39,6 +42,10 @@ Make sure Docker Desktop or your local Docker daemon is running before you start
 - the compose stack mounts the repo for live edits
 - polling is enabled so file watching stays reliable inside Docker
 - the Postgres service matches the `DATABASE_URL` used by the web app
+- the web service exposes live and readiness probes for deployment platforms and local diagnostics
+
+When you promote this setup toward production, enable `DIFFMINT_REQUIRE_PERSISTENCE=true` so the
+control plane fails fast if Postgres is unavailable instead of serving fallback memory state.
 
 ## Useful commands
 

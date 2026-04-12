@@ -1,0 +1,18 @@
+---
+title: Signed Release Manifests
+description: Release channel manifests can now be signed for safer CLI and VS Code rollout metadata.
+section: Changelog
+order: 202604131930
+surfaces:
+  - cli
+  - vscode
+  - web
+related:
+  - /docs/release-channels/overview
+---
+
+# Signed Release Manifests
+
+- the public release manifest endpoint can now sign CLI and VS Code release metadata with `ed25519`
+- signed manifests include `algorithm`, `keyId`, `signedAt`, and a base64 signature value
+- signing is optional and activates when `DIFFMINT_RELEASE_SIGNING_PRIVATE_KEY` is configured

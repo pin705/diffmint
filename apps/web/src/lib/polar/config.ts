@@ -25,10 +25,10 @@ export function getPolarConfig(): PolarConfig {
     polarServerSchema.safeParse(process.env.POLAR_SERVER).data ??
     polarServerSchema.parse('sandbox');
   const appUrl =
-    process.env.DEVFLOW_APP_URL ??
+    process.env.DIFFMINT_APP_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
-    'http://localhost:3000';
+    'https://diffmint.io';
 
   return {
     accessToken: process.env.POLAR_ACCESS_TOKEN,

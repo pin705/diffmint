@@ -1,5 +1,5 @@
 {
-  "name": "devflow",
+  "name": "diffmint",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.12.4",
@@ -10,6 +10,7 @@
     "build": "pnpm build:web",
     "build:web": "pnpm --dir apps/web build",
     "build:vscode": "pnpm --dir apps/vscode build",
+    "package:vscode": "pnpm --dir apps/vscode package",
     "start": "pnpm start:web",
     "start:web": "pnpm --dir apps/web start",
     "db:generate": "pnpm --dir apps/web db:generate",
@@ -28,7 +29,7 @@
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "DIFFMINT_DISABLE_CLERK=true NEXT_PUBLIC_DIFFMINT_DISABLE_CLERK=true pnpm build:web && DIFFMINT_DISABLE_CLERK=true NEXT_PUBLIC_DIFFMINT_DISABLE_CLERK=true playwright test",
     "test:e2e:install": "playwright install chromium",
     "typecheck": "pnpm typecheck:web && pnpm typecheck:cli && pnpm typecheck:vscode",
     "typecheck:web": "rm -rf apps/web/.next && pnpm exec tsc -p apps/web/tsconfig.json --noEmit",

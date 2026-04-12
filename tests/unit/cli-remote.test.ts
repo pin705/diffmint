@@ -7,7 +7,7 @@ import { once } from 'node:events';
 import { afterEach, describe, expect, it } from 'vitest';
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 
-const cliBin = fileURLToPath(new URL('../../apps/cli/bin/devflow', import.meta.url));
+const cliBin = fileURLToPath(new URL('../../apps/cli/bin/dm', import.meta.url));
 const tempDirs: string[] = [];
 const servers: Array<ReturnType<typeof createServer>> = [];
 
@@ -28,12 +28,12 @@ function createRepoWithChangedFile(filePath = 'apps/web/src/app/api/client/histo
   repoDir: string;
   filePath: string;
 } {
-  const repoDir = makeTempDir('devflow-cli-remote-repo-');
+  const repoDir = makeTempDir('diffmint-cli-remote-repo-');
   const absoluteFilePath = path.join(repoDir, filePath);
 
   runGit(repoDir, ['init']);
-  runGit(repoDir, ['config', 'user.email', 'devflow@example.com']);
-  runGit(repoDir, ['config', 'user.name', 'Devflow Tests']);
+  runGit(repoDir, ['config', 'user.email', 'team@diffmint.io']);
+  runGit(repoDir, ['config', 'user.name', 'Diffmint Tests']);
 
   mkdirSync(path.dirname(absoluteFilePath), { recursive: true });
   writeFileSync(
@@ -62,8 +62,9 @@ function runCli(args: string[], cwd: string, homeDir: string, apiBaseUrl: string
       ...process.env,
       HOME: homeDir,
       USERPROFILE: homeDir,
-      DEVFLOW_API_BASE_URL: apiBaseUrl,
-      DEVFLOW_DEVICE_AUTH_TIMEOUT_MS: '2000'
+      DIFFMINT_API_BASE_URL: apiBaseUrl,
+      DIFFMINT_DEVICE_AUTH_TIMEOUT_MS: '2000',
+      DIFFMINT_REVIEW_RUNTIME: 'scaffold'
     }
   });
 }
@@ -75,8 +76,9 @@ async function runCliAsync(args: string[], cwd: string, homeDir: string, apiBase
       ...process.env,
       HOME: homeDir,
       USERPROFILE: homeDir,
-      DEVFLOW_API_BASE_URL: apiBaseUrl,
-      DEVFLOW_DEVICE_AUTH_TIMEOUT_MS: '2000'
+      DIFFMINT_API_BASE_URL: apiBaseUrl,
+      DIFFMINT_DEVICE_AUTH_TIMEOUT_MS: '2000',
+      DIFFMINT_REVIEW_RUNTIME: 'scaffold'
     },
     stdio: 'pipe'
   });
@@ -118,13 +120,17 @@ async function createControlPlaneServer(): Promise<{
   state: {
     history: Array<{ traceId: string }>;
     usageEvents: Array<{ event: string }>;
+    installations: Array<{ clientType: string; version: string; platform: string }>;
     authorizedPaths: string[];
+    acceptSyncUploads: boolean;
   };
 }> {
   const state = {
     history: [] as Array<{ traceId: string }>,
     usageEvents: [] as Array<{ event: string }>,
-    authorizedPaths: [] as string[]
+    installations: [] as Array<{ clientType: string; version: string; platform: string }>,
+    authorizedPaths: [] as string[],
+    acceptSyncUploads: true
   };
 
   function requireApprovedDeviceSession(
@@ -148,6 +154,7 @@ async function createControlPlaneServer(): Promise<{
 
     response.setHeader('content-type', 'application/json');
     response.setHeader('connection', 'close');
+    response.setHeader('x-diffmint-request-id', 'req_remote_test_123');
 
     if (request.method === 'POST' && url.pathname === '/api/client/device/start') {
       response.end(
@@ -259,6 +266,12 @@ async function createControlPlaneServer(): Promise<{
         return;
       }
 
+      if (!state.acceptSyncUploads) {
+        response.statusCode = 503;
+        response.end(JSON.stringify({ error: 'Control plane ingest unavailable.' }));
+        return;
+      }
+
       const body = (await readBody(request)) as { traceId: string };
       state.history.unshift(body);
       response.end(JSON.stringify({ accepted: true, item: body }));
@@ -267,6 +280,12 @@ async function createControlPlaneServer(): Promise<{
 
     if (request.method === 'POST' && url.pathname === '/api/client/usage') {
       if (!requireApprovedDeviceSession(request, response)) {
+        return;
+      }
+
+      if (!state.acceptSyncUploads) {
+        response.statusCode = 503;
+        response.end(JSON.stringify({ error: 'Control plane ingest unavailable.' }));
         return;
       }
 
@@ -279,6 +298,32 @@ async function createControlPlaneServer(): Promise<{
             id: 'usage_remote',
             workspaceId: 'ws_remote',
             createdAt: new Date().toISOString(),
+            ...body
+          }
+        })
+      );
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/client/installations') {
+      if (!requireApprovedDeviceSession(request, response)) {
+        return;
+      }
+
+      const body = (await readBody(request)) as {
+        clientType: string;
+        version: string;
+        platform: string;
+      };
+      state.installations.unshift(body);
+      response.end(
+        JSON.stringify({
+          accepted: true,
+          item: {
+            id: 'install_remote',
+            workspaceId: 'ws_remote',
+            channel: 'stable',
+            lastSeenAt: new Date().toISOString(),
             ...body
           }
         })
@@ -307,7 +352,7 @@ async function createControlPlaneServer(): Promise<{
   };
 }
 
-describe('devflow cli remote control plane integration', () => {
+describe('diffmint cli remote control plane integration', () => {
   afterEach(async () => {
     while (servers.length > 0) {
       const server = servers.pop();
@@ -328,7 +373,7 @@ describe('devflow cli remote control plane integration', () => {
 
   it('logs in via the control plane, syncs review history, and reads remote history back', async () => {
     const controlPlane = await createControlPlaneServer();
-    const homeDir = makeTempDir('devflow-cli-remote-home-');
+    const homeDir = makeTempDir('diffmint-cli-remote-home-');
     const { repoDir, filePath } = createRepoWithChangedFile();
 
     const loginResult = await runCliAsync(
@@ -344,7 +389,7 @@ describe('devflow cli remote control plane integration', () => {
       controlPlane.baseUrl
     );
     const historyResult = await runCliAsync(['history'], repoDir, homeDir, controlPlane.baseUrl);
-    const configPath = path.join(homeDir, '.devflow', 'config.json');
+    const configPath = path.join(homeDir, '.diffmint', 'config.json');
     const loginFailureMessage = [
       `status=${loginResult.status}`,
       `signal=${loginResult.signal}`,
@@ -368,9 +413,12 @@ describe('devflow cli remote control plane integration', () => {
     expect(config.policyVersionId).toBe('policy-remote-v1');
     expect(config.provider).toBe('qwen');
     expect(controlPlane.state.authorizedPaths).toContain('/api/client/bootstrap');
+    expect(controlPlane.state.authorizedPaths).toContain('/api/client/installations');
+    expect(controlPlane.state.installations[0]?.clientType).toBe('cli');
+    expect(controlPlane.state.installations[0]?.version).toBe('0.1.0');
 
     expect(reviewResult.status).toBe(0);
-    expect(reviewResult.stdout).toContain('# Devflow Review');
+    expect(reviewResult.stdout).toContain('# Diffmint Review');
     expect(controlPlane.state.history).toHaveLength(1);
     expect(controlPlane.state.usageEvents[0]?.event).toBe('sync.uploaded');
     expect(controlPlane.state.authorizedPaths).toContain('/api/client/history');
@@ -378,5 +426,52 @@ describe('devflow cli remote control plane integration', () => {
 
     expect(history).toHaveLength(1);
     expect(history[0]?.traceId).toBe(controlPlane.state.history[0]?.traceId);
-  });
+  }, 20_000);
+
+  it('queues review sync payloads locally when ingest is unavailable and flushes them later', async () => {
+    const controlPlane = await createControlPlaneServer();
+    const homeDir = makeTempDir('diffmint-cli-queue-home-');
+    const { repoDir, filePath } = createRepoWithChangedFile();
+    const queuePath = path.join(homeDir, '.diffmint', 'sync-queue.json');
+
+    const loginResult = await runCliAsync(
+      ['auth', 'login'],
+      repoDir,
+      homeDir,
+      controlPlane.baseUrl
+    );
+
+    expect(loginResult.status).toBe(0);
+
+    controlPlane.state.acceptSyncUploads = false;
+
+    const reviewResult = await runCliAsync(
+      ['review', '--files', filePath, '--markdown'],
+      repoDir,
+      homeDir,
+      controlPlane.baseUrl
+    );
+    const queuedItems = JSON.parse(readFileSync(queuePath, 'utf8')) as Array<{
+      pathname: string;
+    }>;
+
+    expect(reviewResult.status).toBe(0);
+    expect(reviewResult.stdout).toContain('Cloud sync skipped: Queued review for later sync');
+    expect(reviewResult.stdout).toContain('request: req_remote_test_123');
+    expect(queuedItems).toHaveLength(2);
+    expect(controlPlane.state.history).toHaveLength(0);
+    expect(controlPlane.state.usageEvents).toHaveLength(0);
+
+    controlPlane.state.acceptSyncUploads = true;
+
+    const historyResult = await runCliAsync(['history'], repoDir, homeDir, controlPlane.baseUrl);
+    const history = JSON.parse(historyResult.stdout) as Array<{ traceId: string }>;
+    const remainingQueue = JSON.parse(readFileSync(queuePath, 'utf8')) as unknown[];
+
+    expect(historyResult.status).toBe(0);
+    expect(controlPlane.state.history).toHaveLength(1);
+    expect(controlPlane.state.usageEvents[0]?.event).toBe('sync.uploaded');
+    expect(history).toHaveLength(1);
+    expect(remainingQueue).toHaveLength(0);
+  }, 20_000);
 });

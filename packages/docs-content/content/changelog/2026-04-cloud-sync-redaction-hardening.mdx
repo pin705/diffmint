@@ -1,0 +1,19 @@
+---
+title: Cloud Sync Redaction Hardening
+description: Synced review history now redacts common secret patterns and strips raw provider output.
+section: Changelog
+order: 202604131200
+surfaces:
+  - cli
+  - web
+  - admin
+related:
+  - /docs/security/privacy-and-redaction
+  - /docs/concepts/local-first-review
+---
+
+# Cloud Sync Redaction Hardening
+
+- synced review history now redacts common bearer tokens, API keys, GitHub tokens, and secret-style assignments before upload
+- raw provider output artifacts are replaced with a redacted placeholder before they reach cloud history
+- control plane ingest applies the same sanitization path as a defense-in-depth safeguard

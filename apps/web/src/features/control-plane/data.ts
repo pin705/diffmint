@@ -5,11 +5,11 @@ import type {
   ReviewSession,
   UsageEvent,
   WorkspaceBootstrap
-} from '@devflow/contracts';
+} from '@diffmint/contracts';
 import type { BillingPlanKey, BillingSubscriptionStatus } from '@/lib/billing/adapter';
-import { createDefaultPolicyBundle } from '@devflow/policy-engine';
+import { createDefaultPolicyBundle } from '@diffmint/policy-engine';
 
-const workspaceId = 'ws_devflow_core';
+const workspaceId = 'ws_diffmint_core';
 
 export interface AuditEventRecord {
   id: string;
@@ -41,8 +41,8 @@ export interface BillingWorkspaceSeed {
 
 export const workspaceSeed: WorkspaceBootstrap['workspace'] = {
   id: workspaceId,
-  slug: 'devflow-core',
-  name: 'Devflow Core'
+  slug: 'diffmint-core',
+  name: 'Diffmint Core'
 };
 
 export const workspaceRole: WorkspaceBootstrap['role'] = 'owner';
@@ -104,7 +104,7 @@ export const policyBundles: PolicyBundle[] = [
 export const reviewSessions: ReviewSession[] = [
   {
     id: 'review-001',
-    traceId: 'trace-devflow-001',
+    traceId: 'trace-diffmint-001',
     requestId: 'request-001',
     workspaceId,
     source: 'branch_compare',
@@ -123,7 +123,7 @@ export const reviewSessions: ReviewSession[] = [
   },
   {
     id: 'review-002',
-    traceId: 'trace-devflow-002',
+    traceId: 'trace-diffmint-002',
     requestId: 'request-002',
     workspaceId,
     source: 'selected_files',
@@ -142,7 +142,7 @@ export const reviewSessions: ReviewSession[] = [
   },
   {
     id: 'review-003',
-    traceId: 'trace-devflow-003',
+    traceId: 'trace-diffmint-003',
     requestId: 'request-003',
     workspaceId,
     source: 'local_diff',
@@ -168,15 +168,15 @@ export const releaseManifests: ReleaseManifest[] = [
     releasedAt: '2026-04-12T00:00:00.000Z',
     cli: {
       version: '0.1.0',
-      downloadUrl: 'https://example.com/devflow-cli',
+      downloadUrl: 'https://diffmint.io/downloads/dm',
       checksum: 'sha256-cli'
     },
     vscode: {
       version: '0.1.0',
-      marketplaceUrl: 'https://example.com/devflow-vscode',
+      marketplaceUrl: 'https://diffmint.io/downloads/vscode',
       checksum: 'sha256-vscode'
     },
-    notesUrl: 'http://localhost:3000/docs/changelog/2026-04-foundation'
+    notesUrl: 'https://diffmint.io/docs/changelog/2026-04-foundation'
   }
 ];
 
@@ -184,12 +184,12 @@ export const usageEvents: UsageEvent[] = [
   {
     id: 'usage-001',
     workspaceId,
-    actorId: 'user_devflow_owner',
+    actorId: 'user_diffmint_owner',
     source: 'cli',
     event: 'review.completed',
     creditsDelta: -1200,
     metadata: {
-      traceId: 'trace-devflow-001',
+      traceId: 'trace-diffmint-001',
       commandSource: 'cli'
     },
     createdAt: '2026-04-12T09:00:15.000Z'
@@ -199,7 +199,7 @@ export const usageEvents: UsageEvent[] = [
 export const billingWorkspaceSeed: BillingWorkspaceSeed = {
   workspaceId,
   workspaceName: workspaceSeed.name,
-  customerId: 'cus_devflow_core',
+  customerId: 'cus_diffmint_core',
   planKey: 'team',
   subscriptionStatus: 'active',
   seatsUsed: 26,
@@ -229,8 +229,8 @@ export const auditEvents: AuditEventRecord[] = [
   {
     id: 'audit-003',
     event: 'review.synced',
-    actor: 'Devflow CLI',
-    target: 'trace-devflow-001',
+    actor: 'Diffmint CLI',
+    target: 'trace-diffmint-001',
     when: '2026-04-12 09:00 UTC',
     detail: 'Uploaded summary, severity counts, and markdown artifact.'
   }

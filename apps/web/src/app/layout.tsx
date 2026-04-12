@@ -16,12 +16,13 @@ const META_THEME_COLORS = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://diffmint.io'),
   title: {
-    default: 'Devflow',
-    template: '%s | Devflow'
+    default: 'Diffmint',
+    template: '%s | Diffmint'
   },
   description:
-    'Devflow is a local-first, policy-driven code review platform with CLI and VS Code as the primary experience.'
+    'Diffmint is a local-first, policy-driven code review platform with CLI and VS Code as the primary experience.'
 };
 
 export const viewport: Viewport = {

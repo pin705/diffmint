@@ -1,6 +1,6 @@
 ---
 title: Install the VS Code Extension
-description: Connect the editor companion to the local CLI and Devflow workspace.
+description: Connect the editor companion to the local CLI and Diffmint workspace.
 section: Getting Started
 order: 30
 surfaces:
@@ -13,24 +13,34 @@ related:
 
 # Install the VS Code Extension
 
-The extension is a companion to the CLI. It shells out to the local `devflow` binary and renders results in editor-native panels.
+The extension is a companion to the CLI. It shells out to the local `dm` binary and renders results in editor-native panels.
 
 ## Setup flow
 
 1. Install the CLI first.
 2. Install the VS Code extension.
-3. Click **Sign In** in the extension.
-4. Complete browser auth and return to the editor.
-5. Run **Review Current Changes**.
+3. Confirm the extension can find the `dm` binary, or set `diffmint.cliPath`.
+4. Set `diffmint.webBaseUrl` if you are pointing the extension at a self-hosted or local control plane instead of `https://diffmint.io`.
+5. Click **Sign In** in the extension.
+6. Complete browser auth and return to the editor.
+7. Run **Review Current Changes**.
 
 ## Expected commands
 
 The extension uses the same flows as the CLI:
 
-- `devflow review`
-- `devflow review --staged`
-- `devflow review --files ...`
-- `devflow explain <file>`
-- `devflow tests <file>`
+- `dm review`
+- `dm review --staged`
+- `dm review --files ...`
+- `dm explain <file>`
+- `dm tests <file>`
 
 Read the [VS Code guide](/docs/vscode/guide) for command mapping and result panels.
+
+## Packaging
+
+For internal rollout or release automation, package the extension as a VSIX:
+
+```bash
+pnpm package:vscode
+```
