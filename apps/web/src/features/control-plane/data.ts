@@ -1,7 +1,65 @@
-import type { PolicyBundle, ProviderConfigSummary, ReviewSession } from '@devflow/contracts';
+import type {
+  PolicyBundle,
+  ProviderConfigSummary,
+  ReleaseManifest,
+  ReviewSession,
+  UsageEvent,
+  WorkspaceBootstrap
+} from '@devflow/contracts';
+import type { BillingPlanKey, BillingSubscriptionStatus } from '@/lib/billing/adapter';
 import { createDefaultPolicyBundle } from '@devflow/policy-engine';
 
 const workspaceId = 'ws_devflow_core';
+
+export interface AuditEventRecord {
+  id: string;
+  event: string;
+  actor: string;
+  target: string;
+  when: string;
+  detail: string;
+}
+
+export interface OverviewStat {
+  label: string;
+  value: string;
+  helper: string;
+}
+
+export interface BillingWorkspaceSeed {
+  workspaceId: string;
+  workspaceName: string;
+  customerId?: string;
+  planKey: BillingPlanKey;
+  subscriptionStatus: BillingSubscriptionStatus;
+  seatsUsed: number;
+  seatLimit: number;
+  creditsIncluded: number;
+  creditsRemaining: number;
+  spendCapUsd: number;
+}
+
+export const workspaceSeed: WorkspaceBootstrap['workspace'] = {
+  id: workspaceId,
+  slug: 'devflow-core',
+  name: 'Devflow Core'
+};
+
+export const workspaceRole: WorkspaceBootstrap['role'] = 'owner';
+
+export const workspaceQuotas: WorkspaceBootstrap['quotas'] = {
+  includedCredits: 200000,
+  remainingCredits: 156000,
+  seats: 26,
+  seatLimit: 30,
+  spendCapUsd: 500
+};
+
+export const workspaceSyncDefaults: WorkspaceBootstrap['syncDefaults'] = {
+  cloudSyncEnabled: true,
+  localOnlyDefault: false,
+  redactionEnabled: true
+};
 
 export const providerSummaries: ProviderConfigSummary[] = [
   {
@@ -103,7 +161,55 @@ export const reviewSessions: ReviewSession[] = [
   }
 ];
 
-export const auditEvents = [
+export const releaseManifests: ReleaseManifest[] = [
+  {
+    channel: 'stable',
+    version: '0.1.0',
+    releasedAt: '2026-04-12T00:00:00.000Z',
+    cli: {
+      version: '0.1.0',
+      downloadUrl: 'https://example.com/devflow-cli',
+      checksum: 'sha256-cli'
+    },
+    vscode: {
+      version: '0.1.0',
+      marketplaceUrl: 'https://example.com/devflow-vscode',
+      checksum: 'sha256-vscode'
+    },
+    notesUrl: 'http://localhost:3000/docs/changelog/2026-04-foundation'
+  }
+];
+
+export const usageEvents: UsageEvent[] = [
+  {
+    id: 'usage-001',
+    workspaceId,
+    actorId: 'user_devflow_owner',
+    source: 'cli',
+    event: 'review.completed',
+    creditsDelta: -1200,
+    metadata: {
+      traceId: 'trace-devflow-001',
+      commandSource: 'cli'
+    },
+    createdAt: '2026-04-12T09:00:15.000Z'
+  }
+];
+
+export const billingWorkspaceSeed: BillingWorkspaceSeed = {
+  workspaceId,
+  workspaceName: workspaceSeed.name,
+  customerId: 'cus_devflow_core',
+  planKey: 'team',
+  subscriptionStatus: 'active',
+  seatsUsed: 26,
+  seatLimit: 30,
+  creditsIncluded: 200000,
+  creditsRemaining: 156000,
+  spendCapUsd: 500
+};
+
+export const auditEvents: AuditEventRecord[] = [
   {
     id: 'audit-001',
     event: 'policy.version_published',
@@ -130,7 +236,7 @@ export const auditEvents = [
   }
 ];
 
-export const overviewStats = [
+export const overviewStats: OverviewStat[] = [
   {
     label: 'Synced reviews',
     value: '148',

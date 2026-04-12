@@ -1,20 +1,35 @@
-'use client';
-
 import PageContainer from '@/components/layout/page-container';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useOrganization } from '@clerk/nextjs';
-import { PricingTable } from '@clerk/nextjs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Icons } from '@/components/icons';
+import { auth } from '@clerk/nextjs/server';
 import { billingInfoContent } from '@/config/infoconfig';
+import { BillingPageContent } from '@/features/control-plane/components/billing-page';
+import { getBillingWorkspaceSnapshot } from '@/features/control-plane/server/service';
+import { PolarBillingAdapter } from '@/lib/billing/polar-billing-adapter';
 
-export default function BillingPage() {
-  const { organization, isLoaded } = useOrganization();
+export default async function BillingPage() {
+  const { orgId } = await auth();
+  const adapter = new PolarBillingAdapter();
+  const billingSnapshot = getBillingWorkspaceSnapshot({
+    workspaceId: orgId ?? undefined
+  });
+  const summary = orgId
+    ? await adapter.getWorkspaceSummary({
+        workspaceId: orgId,
+        customerExternalId: orgId,
+        workspaceName: billingSnapshot.workspaceName,
+        planKey: billingSnapshot.planKey,
+        subscriptionStatus: billingSnapshot.subscriptionStatus,
+        seatsUsed: billingSnapshot.seatsUsed,
+        seatLimit: billingSnapshot.seatLimit,
+        creditsIncluded: billingSnapshot.creditsIncluded,
+        creditsRemaining: billingSnapshot.creditsRemaining,
+        spendCapUsd: billingSnapshot.spendCapUsd,
+        polarCustomerId: billingSnapshot.customerId
+      })
+    : null;
 
   return (
     <PageContainer
-      isLoading={!isLoaded}
-      access={!!organization}
+      access={!!orgId}
       accessFallback={
         <div className='flex min-h-[400px] items-center justify-center'>
           <div className='space-y-2 text-center'>
@@ -26,32 +41,10 @@ export default function BillingPage() {
         </div>
       }
       infoContent={billingInfoContent}
-      pageTitle='Billing & Plans'
-      pageDescription={`Manage your subscription and usage limits for ${organization?.name}`}
+      pageTitle='Billing & Quota'
+      pageDescription='Manage Polar plans, workspace seats, included credits, and customer portal access.'
     >
-      <div className='space-y-6'>
-        {/* Info Alert */}
-        <Alert>
-          <Icons.info className='h-4 w-4' />
-          <AlertDescription>
-            Plans and subscriptions are managed through Clerk Billing. Subscribe to a plan to unlock
-            features and higher limits.
-          </AlertDescription>
-        </Alert>
-
-        {/* Clerk Pricing Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Available Plans</CardTitle>
-            <CardDescription>Choose a plan that fits your organization's needs</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className='mx-auto max-w-4xl'>
-              <PricingTable for='organization' />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {summary ? <BillingPageContent summary={summary} /> : null}
     </PageContainer>
   );
 }

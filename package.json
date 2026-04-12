@@ -29,7 +29,7 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "typecheck": "pnpm typecheck:web && pnpm typecheck:cli && pnpm typecheck:vscode",
-    "typecheck:web": "pnpm exec tsc -p apps/web/tsconfig.json --noEmit",
+    "typecheck:web": "rm -rf apps/web/.next && pnpm exec tsc -p apps/web/tsconfig.json --noEmit",
     "typecheck:cli": "pnpm exec tsc -p apps/cli/tsconfig.json --noEmit",
     "typecheck:vscode": "pnpm exec tsc -p apps/vscode/tsconfig.json --noEmit",
     "docs:check": "pnpm --dir apps/web docs:check",

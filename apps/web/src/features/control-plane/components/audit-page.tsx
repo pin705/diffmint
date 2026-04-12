@@ -7,9 +7,13 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { auditEvents } from '../data';
+import type { AuditEventRecord } from '../server/service';
 
-export function AuditPageContent() {
+interface AuditPageContentProps {
+  auditEvents: AuditEventRecord[];
+}
+
+export function AuditPageContent({ auditEvents }: AuditPageContentProps) {
   return (
     <Card>
       <CardHeader>

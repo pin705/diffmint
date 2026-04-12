@@ -24,6 +24,14 @@ export const membershipRoleEnum = pgEnum('membership_role', [
 ]);
 
 export const providerModeEnum = pgEnum('provider_mode', ['managed', 'byok']);
+export const billingProviderEnum = pgEnum('billing_provider', ['polar']);
+export const billingStatusEnum = pgEnum('billing_status', [
+  'active',
+  'trialing',
+  'past_due',
+  'canceled',
+  'inactive'
+]);
 export const reviewSourceEnum = pgEnum('review_source', [
   'local_diff',
   'selected_files',
@@ -81,6 +89,26 @@ export const providerConfigs = pgTable('provider_configs', {
   fallbackProvider: varchar('fallback_provider', { length: 128 }),
   rateLimitPerMinute: integer('rate_limit_per_minute'),
   encrypted: boolean('encrypted').default(true).notNull(),
+  ...timestamps
+});
+
+export const billingAccounts = pgTable('billing_accounts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  workspaceId: uuid('workspace_id')
+    .notNull()
+    .references(() => workspaces.id),
+  provider: billingProviderEnum('provider').default('polar').notNull(),
+  customerId: varchar('customer_id', { length: 191 }),
+  subscriptionId: varchar('subscription_id', { length: 191 }),
+  planKey: varchar('plan_key', { length: 64 }).notNull(),
+  status: billingStatusEnum('status').default('inactive').notNull(),
+  seatsUsed: integer('seats_used').default(0).notNull(),
+  seatLimit: integer('seat_limit').default(0).notNull(),
+  creditsIncluded: integer('credits_included').default(0).notNull(),
+  creditsRemaining: integer('credits_remaining').default(0).notNull(),
+  spendCapUsd: integer('spend_cap_usd').default(0).notNull(),
+  productIds: jsonb('product_ids').$type<Record<string, string>>(),
+  metadata: jsonb('metadata'),
   ...timestamps
 });
 

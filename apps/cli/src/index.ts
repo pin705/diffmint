@@ -1,6 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import type {
+  DeviceAuthSession,
+  ReviewSession,
+  UsageEvent,
+  WorkspaceBootstrap
+} from '@devflow/contracts';
 import {
   buildReviewRequest,
   createReviewSession,
@@ -15,7 +21,12 @@ interface LocalConfig {
   workspace?: {
     id: string;
     name: string;
+    slug?: string;
   };
+  role?: WorkspaceBootstrap['role'];
+  policyVersionId?: string;
+  syncDefaults?: WorkspaceBootstrap['syncDefaults'];
+  lastDeviceCode?: string;
   signedInAt?: string;
 }
 
@@ -134,6 +145,208 @@ function output(data: string | object, asJson: boolean): void {
   console.log(typeof data === 'string' ? data : JSON.stringify(data, null, 2));
 }
 
+function getApiBaseUrl(config: LocalConfig): string {
+  return config.apiBaseUrl ?? process.env.DEVFLOW_API_BASE_URL ?? 'http://localhost:3000';
+}
+
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    let detail = `${response.status} ${response.statusText}`;
+
+    try {
+      const payload = (await response.json()) as { error?: string };
+      if (payload.error) {
+        detail = payload.error;
+      }
+    } catch {
+      // Ignore invalid JSON and fall back to HTTP status detail.
+    }
+
+    throw new Error(detail);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function fetchApi<T>(baseUrl: string, pathname: string, init?: RequestInit): Promise<T> {
+  const url = new URL(pathname, baseUrl).toString();
+  const response = await fetch(url, init);
+  return readJson<T>(response);
+}
+
+async function postApi<T>(baseUrl: string, pathname: string, body?: unknown): Promise<T> {
+  return fetchApi<T>(baseUrl, pathname, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json'
+    },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function waitForDeviceApproval(
+  baseUrl: string,
+  session: DeviceAuthSession
+): Promise<DeviceAuthSession> {
+  const timeoutMs = Number(process.env.DEVFLOW_DEVICE_AUTH_TIMEOUT_MS ?? 10_000);
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const nextSession = await postApi<DeviceAuthSession>(baseUrl, '/api/client/device/poll', {
+      deviceCode: session.deviceCode
+    });
+
+    if (nextSession.status !== 'pending') {
+      return nextSession;
+    }
+
+    await delay(nextSession.intervalSeconds * 1000);
+  }
+
+  throw new Error('Timed out waiting for device approval.');
+}
+
+async function tryRemoteLogin(config: LocalConfig): Promise<LocalConfig> {
+  const apiBaseUrl = getApiBaseUrl(config);
+  const session = await postApi<DeviceAuthSession>(apiBaseUrl, '/api/client/device/start', {
+    workspaceId: config.workspace?.id
+  });
+  const verificationUrl = session.verificationUriComplete ?? session.verificationUri;
+
+  console.log(`Open the device flow in your browser: ${verificationUrl}`);
+  console.log(`Enter code: ${session.userCode}`);
+
+  const approvedSession = await waitForDeviceApproval(apiBaseUrl, session);
+
+  if (approvedSession.status !== 'approved') {
+    throw new Error(`Device approval ended with status: ${approvedSession.status}`);
+  }
+
+  const bootstrap = await fetchApi<WorkspaceBootstrap>(apiBaseUrl, '/api/client/bootstrap');
+
+  return {
+    ...config,
+    apiBaseUrl,
+    provider: bootstrap.provider.provider,
+    role: bootstrap.role,
+    policyVersionId: bootstrap.policy.policyVersionId,
+    workspace: {
+      id: bootstrap.workspace.id,
+      name: bootstrap.workspace.name,
+      slug: bootstrap.workspace.slug
+    },
+    syncDefaults: bootstrap.syncDefaults,
+    lastDeviceCode: approvedSession.deviceCode,
+    signedInAt: new Date().toISOString()
+  };
+}
+
+function buildLocalFallbackConfig(config: LocalConfig): LocalConfig {
+  return {
+    ...config,
+    apiBaseUrl: getApiBaseUrl(config),
+    workspace: config.workspace ?? {
+      id: 'ws_local',
+      name: 'Local Workspace'
+    },
+    provider: config.provider ?? 'qwen',
+    signedInAt: new Date().toISOString()
+  };
+}
+
+async function syncReviewToCloud(config: LocalConfig, session: ReviewSession): Promise<void> {
+  if (!config.workspace || config.syncDefaults?.cloudSyncEnabled === false) {
+    return;
+  }
+
+  const apiBaseUrl = getApiBaseUrl(config);
+  const payload: ReviewSession = {
+    ...session,
+    workspaceId: config.workspace.id
+  };
+
+  await postApi(apiBaseUrl, '/api/client/history', payload);
+  await postApi<UsageEvent>(apiBaseUrl, '/api/client/usage', {
+    workspaceId: config.workspace.id,
+    source: session.commandSource,
+    event: 'sync.uploaded',
+    metadata: {
+      traceId: session.traceId
+    }
+  });
+}
+
+async function loadHistory(config: LocalConfig): Promise<unknown[]> {
+  if (!config.workspace) {
+    return readHistory();
+  }
+
+  try {
+    const payload = await fetchApi<{ items: unknown[] }>(
+      getApiBaseUrl(config),
+      '/api/client/history'
+    );
+    return payload.items;
+  } catch {
+    return readHistory();
+  }
+}
+
+async function extendDoctorOutput(config: LocalConfig): Promise<unknown[]> {
+  const checks = runDoctor(process.cwd());
+  const extendedChecks = [
+    ...checks,
+    {
+      id: 'config',
+      label: 'Local config',
+      status: config.signedInAt ? 'ok' : 'warn',
+      detail: config.signedInAt
+        ? `Signed in to ${config.workspace?.name ?? 'unknown workspace'}`
+        : 'Run `devflow auth login` to connect a workspace.'
+    }
+  ];
+
+  if (!config.apiBaseUrl) {
+    return extendedChecks;
+  }
+
+  try {
+    const bootstrap = await fetchApi<WorkspaceBootstrap>(
+      config.apiBaseUrl,
+      '/api/client/bootstrap'
+    );
+
+    return [
+      ...extendedChecks,
+      {
+        id: 'control-plane',
+        label: 'Control plane',
+        status: 'ok',
+        detail: `Connected to ${bootstrap.workspace.name} via ${config.apiBaseUrl}`
+      }
+    ];
+  } catch (error) {
+    return [
+      ...extendedChecks,
+      {
+        id: 'control-plane',
+        label: 'Control plane',
+        status: 'warn',
+        detail:
+          error instanceof Error
+            ? `Configured but unreachable: ${error.message}`
+            : 'Configured but unreachable.'
+      }
+    ];
+  }
+}
+
 function explainFile(target: string): string {
   const absolute = path.resolve(process.cwd(), target);
   const source = readFileSync(absolute, 'utf8');
@@ -171,23 +384,45 @@ async function main() {
 
   if (command === 'auth' && subcommand === 'login') {
     const config = readConfig();
-    const nextConfig: LocalConfig = {
-      ...config,
-      apiBaseUrl: config.apiBaseUrl ?? process.env.DEVFLOW_API_BASE_URL ?? 'http://localhost:3000',
-      workspace: config.workspace ?? {
-        id: 'ws_local',
-        name: 'Local Workspace'
-      },
-      signedInAt: new Date().toISOString()
-    };
+    let nextConfig: LocalConfig;
+
+    try {
+      nextConfig = await tryRemoteLogin(config);
+    } catch (error) {
+      nextConfig = buildLocalFallbackConfig(config);
+      console.log(
+        `Control plane login unavailable, using local fallback: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+
     writeConfig(nextConfig);
     console.log(`Signed in to Devflow.`);
     console.log(`Workspace: ${nextConfig.workspace?.name}`);
     console.log(`Control plane: ${nextConfig.apiBaseUrl}`);
+    if (nextConfig.policyVersionId) {
+      console.log(`Policy version: ${nextConfig.policyVersionId}`);
+    }
+    if (nextConfig.provider) {
+      console.log(`Provider: ${nextConfig.provider}`);
+    }
     return;
   }
 
   if (command === 'auth' && subcommand === 'logout') {
+    const config = readConfig();
+
+    if (config.lastDeviceCode && config.apiBaseUrl) {
+      try {
+        await postApi(config.apiBaseUrl, '/api/client/device/logout', {
+          deviceCode: config.lastDeviceCode
+        });
+      } catch {
+        // Keep logout resilient even when the control plane is offline.
+      }
+    }
+
     writeConfig({});
     console.log('Signed out from Devflow.');
     return;
@@ -220,11 +455,37 @@ async function main() {
       staged: flags.staged,
       outputFormat: flags.json ? 'json' : flags.markdown ? 'markdown' : 'terminal',
       mode: flags.mode as never,
+      localOnly: config.syncDefaults?.localOnlyDefault ?? false,
+      cloudSyncEnabled: config.syncDefaults?.cloudSyncEnabled ?? Boolean(config.workspace),
       provider: config.provider ?? 'qwen',
-      model: 'qwen-code'
+      model: 'qwen-code',
+      policy: config.policyVersionId
+        ? {
+            workspaceId: config.workspace?.id ?? 'ws_local',
+            policySetId: 'seed-policy',
+            policyVersionId: config.policyVersionId,
+            name: 'Workspace Policy',
+            version: config.policyVersionId,
+            checksum: config.policyVersionId,
+            publishedAt: new Date().toISOString(),
+            summary: 'Workspace policy metadata loaded from the control plane.',
+            checklist: [],
+            rules: []
+          }
+        : undefined
     });
     const session = createReviewSession(request);
     appendHistory(session);
+
+    if (!request.localOnly && request.cloudSyncEnabled) {
+      try {
+        await syncReviewToCloud(config, session);
+      } catch (error) {
+        console.log(
+          `Cloud sync skipped: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
 
     if (flags.json) {
       output(session, true);
@@ -241,12 +502,12 @@ async function main() {
   }
 
   if (command === 'history') {
-    output(readHistory(), false);
+    output(await loadHistory(readConfig()), false);
     return;
   }
 
   if (command === 'doctor') {
-    output(runDoctor(process.cwd()), false);
+    output(await extendDoctorOutput(readConfig()), false);
     return;
   }
 

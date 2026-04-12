@@ -53,11 +53,11 @@ export const billingInfoContent: InfobarContent = {
   title: 'Billing',
   sections: [
     {
-      title: 'Seats and quota',
+      title: 'Polar billing posture',
       description:
-        'Billing decisions shape seats, included usage, overage, spend caps, and provider strategy per workspace.',
+        'Polar manages checkout, subscriptions, customer portal sessions, seats, included usage, and workspace spend caps.',
       links: [
-        link('Provider Strategy', '/docs/admin/provider-strategy'),
+        link('Billing with Polar', '/docs/admin/billing-with-polar'),
         link('Privacy and Redaction', '/docs/security/privacy-and-redaction')
       ]
     }
@@ -136,18 +136,6 @@ export const docsCenterInfoContent: InfobarContent = {
         link('CLI Reference', '/docs/cli/reference'),
         link('Workspace Setup', '/docs/admin/workspace-setup')
       ]
-    }
-  ]
-};
-
-export const productInfoContent: InfobarContent = {
-  title: 'Legacy Starter Page',
-  sections: [
-    {
-      title: 'Starter reference only',
-      description:
-        'This route remains from the original dashboard starter. Prefer the Devflow control-plane pages for current product work.',
-      links: [link('Architecture', '/docs/concepts/architecture')]
     }
   ]
 };

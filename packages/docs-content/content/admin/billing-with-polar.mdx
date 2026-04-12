@@ -1,0 +1,49 @@
+---
+title: Billing with Polar
+description: Configure Polar for workspace plans, checkout links, customer portal access, and webhook processing.
+section: Admin Guide
+order: 30
+surfaces:
+  - admin
+  - web
+related:
+  - /docs/admin/workspace-setup
+  - /docs/concepts/architecture
+  - /docs/security/privacy-and-redaction
+---
+
+# Billing with Polar
+
+Devflow uses Polar for plan checkout, subscriptions, invoices, and customer portal access.
+
+## Required environment variables
+
+```bash
+POLAR_SERVER=sandbox
+POLAR_ACCESS_TOKEN=polar_oat_...
+POLAR_WEBHOOK_SECRET=polar_whsec_...
+POLAR_PRODUCT_ID_PRO=...
+POLAR_PRODUCT_ID_TEAM=...
+POLAR_PRODUCT_ID_ENTERPRISE=...
+DEVFLOW_APP_URL=http://localhost:3000
+```
+
+## Billing routes
+
+- `/api/polar/checkout` starts Polar checkout sessions
+- `/api/polar/portal` opens the Polar customer portal for a linked customer
+- `/api/polar/webhooks` receives subscription, checkout, and order events
+
+## Workspace setup checklist
+
+1. Create Polar products for Pro, Team, and Enterprise plans.
+2. Copy the product IDs into the workspace environment.
+3. Set `POLAR_ACCESS_TOKEN` and `POLAR_WEBHOOK_SECRET`.
+4. Verify checkout links render on `/dashboard/billing`.
+5. Verify webhook delivery before enabling production traffic.
+
+## Operational notes
+
+- Keep plan IDs aligned with seat and credit expectations shown in the control plane.
+- Use sandbox first, then switch `POLAR_SERVER=production` only when live credentials are ready.
+- Link the workspace to a Polar customer ID before relying on the customer portal route.

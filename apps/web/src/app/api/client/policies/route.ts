@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { policyBundles } from '@/features/control-plane/data';
+import { listPolicies } from '@/features/control-plane/server/service';
 
 export async function GET() {
   return NextResponse.json({
-    items: policyBundles
+    items: listPolicies()
   });
 }

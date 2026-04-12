@@ -8,9 +8,13 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { providerSummaries } from '../data';
+import type { ProviderConfigSummary } from '@devflow/contracts';
 
-export function ProvidersPageContent() {
+interface ProvidersPageContentProps {
+  providerSummaries: ProviderConfigSummary[];
+}
+
+export function ProvidersPageContent({ providerSummaries }: ProvidersPageContentProps) {
   return (
     <div className='space-y-6'>
       <div className='grid gap-4 lg:grid-cols-2'>

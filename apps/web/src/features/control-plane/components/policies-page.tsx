@@ -8,9 +8,13 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { policyBundles } from '../data';
+import type { PolicyBundle } from '@devflow/contracts';
 
-export function PoliciesPageContent() {
+interface PoliciesPageContentProps {
+  policyBundles: PolicyBundle[];
+}
+
+export function PoliciesPageContent({ policyBundles }: PoliciesPageContentProps) {
   const activePolicy = policyBundles[0];
 
   return (

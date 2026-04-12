@@ -11,15 +11,43 @@ type BreadcrumbItem = {
 // This allows to add custom title as well
 const routeMapping: Record<string, BreadcrumbItem[]> = {
   '/dashboard': [{ title: 'Dashboard', link: '/dashboard' }],
-  '/dashboard/employee': [
+  '/dashboard/overview': [
     { title: 'Dashboard', link: '/dashboard' },
-    { title: 'Employee', link: '/dashboard/employee' }
+    { title: 'Overview', link: '/dashboard/overview' }
   ],
-  '/dashboard/product': [
+  '/dashboard/workspaces': [
     { title: 'Dashboard', link: '/dashboard' },
-    { title: 'Product', link: '/dashboard/product' }
+    { title: 'Workspaces', link: '/dashboard/workspaces' }
+  ],
+  '/dashboard/workspaces/team': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'Workspaces', link: '/dashboard/workspaces' },
+    { title: 'Team', link: '/dashboard/workspaces/team' }
+  ],
+  '/dashboard/providers': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'Providers', link: '/dashboard/providers' }
+  ],
+  '/dashboard/policies': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'Policies', link: '/dashboard/policies' }
+  ],
+  '/dashboard/history': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'History', link: '/dashboard/history' }
+  ],
+  '/dashboard/audit': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'Audit', link: '/dashboard/audit' }
+  ],
+  '/dashboard/billing': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'Billing', link: '/dashboard/billing' }
+  ],
+  '/dashboard/docs': [
+    { title: 'Dashboard', link: '/dashboard' },
+    { title: 'Docs Center', link: '/dashboard/docs' }
   ]
-  // Add more custom mappings as needed
 };
 
 export function useBreadcrumbs() {

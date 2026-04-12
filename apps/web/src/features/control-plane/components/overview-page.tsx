@@ -10,9 +10,22 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { overviewStats, policyBundles, providerSummaries, reviewSessions } from '../data';
+import type { PolicyBundle, ProviderConfigSummary, ReviewSession } from '@devflow/contracts';
+import type { OverviewStat } from '../server/service';
 
-export function ControlPlaneOverviewPage() {
+interface ControlPlaneOverviewPageProps {
+  overviewStats: OverviewStat[];
+  policyBundles: PolicyBundle[];
+  providerSummaries: ProviderConfigSummary[];
+  reviewSessions: ReviewSession[];
+}
+
+export function ControlPlaneOverviewPage({
+  overviewStats,
+  policyBundles,
+  providerSummaries,
+  reviewSessions
+}: ControlPlaneOverviewPageProps) {
   return (
     <div className='space-y-6'>
       <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>

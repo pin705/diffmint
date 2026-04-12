@@ -1,17 +1,31 @@
 import { NextResponse } from 'next/server';
-import type { DeviceAuthSession } from '@devflow/contracts';
+import { ZodError } from 'zod';
+import { deviceAuthStartSchema } from '@/features/control-plane/server/schemas';
+import { startDeviceAuth } from '@/features/control-plane/server/service';
 
-export async function POST() {
-  const session: DeviceAuthSession = {
-    deviceCode: 'device_devflow_local',
-    userCode: 'FLOW-2026',
-    verificationUri: 'http://localhost:3000/auth/sign-in',
-    verificationUriComplete: 'http://localhost:3000/auth/sign-in?device_code=device_devflow_local',
-    expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-    intervalSeconds: 5,
-    status: 'pending',
-    workspaceId: 'ws_devflow_core'
-  };
+export async function POST(request: Request) {
+  try {
+    const rawBody = await request.text();
+    const body = rawBody ? JSON.parse(rawBody) : {};
+    const payload = deviceAuthStartSchema.parse(body);
 
-  return NextResponse.json(session);
+    return NextResponse.json(startDeviceAuth(payload.workspaceId));
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Invalid device auth start payload.',
+          issues: error.issues
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        error: 'Unable to start device auth.'
+      },
+      { status: 500 }
+    );
+  }
 }

@@ -8,9 +8,13 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import { reviewSessions } from '../data';
+import type { ReviewSession } from '@devflow/contracts';
 
-export function HistoryPageContent() {
+interface HistoryPageContentProps {
+  reviewSessions: ReviewSession[];
+}
+
+export function HistoryPageContent({ reviewSessions }: HistoryPageContentProps) {
   return (
     <Card>
       <CardHeader>

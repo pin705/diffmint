@@ -24,6 +24,14 @@ test('install page exposes the docker development workflow', async ({ page }) =>
   await expect(page.getByRole('link', { name: /Open Docker Dev Guide/i })).toBeVisible();
 });
 
+test('billing with polar doc is published for admins', async ({ page }) => {
+  await page.goto('/docs/admin/billing-with-polar');
+
+  await expect(page.getByRole('heading', { name: 'Billing with Polar' }).first()).toBeVisible();
+  await expect(page.getByText(/POLAR_ACCESS_TOKEN/)).toBeVisible();
+  await expect(page.getByText(/\/api\/polar\/checkout/)).toBeVisible();
+});
+
 test('bootstrap api returns workspace bootstrap data for local clients', async ({
   request,
   baseURL

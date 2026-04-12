@@ -11,7 +11,6 @@ export default function TermsOfServicePage() {
   return (
     <div className='min-h-screen px-4 py-12 sm:px-6 lg:px-8'>
       <div className='mx-auto max-w-3xl space-y-8'>
-        {/* Main Heading */}
         <div className='text-center'>
           <h1 className='text-foreground text-3xl font-bold'>Terms of Service</h1>
           <p className='text-muted-foreground mt-2 text-sm'>
@@ -24,39 +23,33 @@ export default function TermsOfServicePage() {
           </p>
         </div>
 
-        {/* Introduction */}
         <section>
           <h2 className='text-foreground mb-3 text-xl font-semibold'>Introduction</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
-            Welcome to our application. These Terms of Service govern your access to and use of our
-            platform. By accessing or using this application, you agree to be bound by these terms.
-            Please read them carefully before proceeding to use our services.
+            These Terms govern access to Devflow, including the web control plane, CLI, VS Code
+            extension, and synced review services. By using Devflow, you agree to use the service in
+            accordance with your organization policies and applicable law.
           </p>
         </section>
 
-        {/* Demo Purpose */}
         <section>
-          <h2 className='text-foreground mb-3 text-xl font-semibold'>Demo Purpose</h2>
+          <h2 className='text-foreground mb-3 text-xl font-semibold'>Acceptable use</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
-            This application is provided solely for demonstration and educational purposes. It is
-            not intended for production use, and we make no guarantees regarding its suitability for
-            any specific purpose. All data and functionality are provided as-is for showcasing
-            features and capabilities only.
+            You are responsible for ensuring that code, policies, provider credentials, and review
+            outputs processed through Devflow comply with your internal security and privacy rules.
+            Do not use the service to process content you are not authorized to analyze.
           </p>
         </section>
 
-        {/* Open Source */}
         <section>
-          <h2 className='text-foreground mb-3 text-xl font-semibold'>Open Source</h2>
+          <h2 className='text-foreground mb-3 text-xl font-semibold'>Billing and paid access</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
-            This is an open-source project. The source code is available for review, modification,
-            and distribution under the applicable open-source license. We encourage community
-            contributions and feedback to help improve the project. Please refer to the project
-            repository for licensing details and contribution guidelines.
+            Paid plans, invoices, and subscription changes are managed through Polar. Workspace
+            access to paid features may depend on an active subscription, seat availability, and
+            workspace-level spend controls.
           </p>
         </section>
 
-        {/* No Warranty */}
         <section>
           <h2 className='text-foreground mb-3 text-xl font-semibold'>No Warranty</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
@@ -68,18 +61,15 @@ export default function TermsOfServicePage() {
           </p>
         </section>
 
-        {/* Data Usage */}
         <section>
-          <h2 className='text-foreground mb-3 text-xl font-semibold'>Data Usage</h2>
+          <h2 className='text-foreground mb-3 text-xl font-semibold'>Data and synced artifacts</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
-            Any data you provide while using this demo application may be stored temporarily for the
-            purpose of demonstrating functionality. We do not guarantee the security or privacy of
-            any data entered into this demo application. Please do not enter sensitive, personal, or
-            confidential information. Data may be deleted or reset at any time without notice.
+            Devflow may store synced review metadata and selected artifacts such as summaries,
+            findings, provider/model information, and audit events. Full repository upload is not
+            required by default, but you remain responsible for what your workspace chooses to sync.
           </p>
         </section>
 
-        {/* Changes */}
         <section>
           <h2 className='text-foreground mb-3 text-xl font-semibold'>Changes to These Terms</h2>
           <p className='text-muted-foreground text-base leading-relaxed'>
@@ -90,11 +80,10 @@ export default function TermsOfServicePage() {
           </p>
         </section>
 
-        {/* Contact */}
         <section className='border-border border-t pt-4'>
           <p className='text-muted-foreground text-center text-sm'>
-            If you have any questions about these Terms of Service, please refer to the project
-            documentation or repository for more information.
+            For workspace-specific legal, billing, or security requirements, maintain internal
+            guidance alongside the Devflow docs center.
           </p>
         </section>
       </div>
