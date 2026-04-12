@@ -1,0 +1,22 @@
+---
+title: 2026-04 Test Harness Foundation
+description: Added workspace-level Vitest and Playwright coverage for CLI, docs content, and public web smoke flows.
+section: Changelog
+order: 30
+surfaces:
+  - cli
+  - web
+  - admin
+related:
+  - /docs/changelog/2026-04-pnpm-and-docker-dev
+  - /docs/getting-started/5-minute-quickstart
+---
+
+# 2026-04 Test Harness Foundation
+
+This update adds a first-class test workflow for the Devflow monorepo.
+
+- `pnpm test:unit` runs Vitest against docs-content, review-core, and CLI integration flows
+- `pnpm test:e2e` runs Playwright smoke coverage for landing, install, docs, and public bootstrap APIs
+- the CLI local bin is more robust when invoked outside the monorepo root during local development
+- Playwright output directories are ignored by git so smoke runs do not pollute the workspace

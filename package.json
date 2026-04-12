@@ -23,6 +23,11 @@
     "lint:strict": "oxlint --deny-warnings .",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
+    "test": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
     "typecheck": "pnpm typecheck:web && pnpm typecheck:cli && pnpm typecheck:vscode",
     "typecheck:web": "pnpm exec tsc -p apps/web/tsconfig.json --noEmit",
     "typecheck:cli": "pnpm exec tsc -p apps/cli/tsconfig.json --noEmit",
@@ -32,6 +37,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "22.10.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
@@ -40,7 +46,8 @@
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
     "tsx": "^4.19.2",
-    "typescript": "5.7.2"
+    "typescript": "5.7.2",
+    "vitest": "^4.1.4"
   },
   "overrides": {
     "@types/react": "19.2.14",

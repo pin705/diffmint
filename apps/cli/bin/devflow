@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec node --import tsx "$SCRIPT_DIR/../src/index.ts" "$@"
+
+LOCAL_TSX_LOADER="$SCRIPT_DIR/../node_modules/tsx/dist/loader.mjs"
+WORKSPACE_TSX_LOADER="$SCRIPT_DIR/../../../node_modules/tsx/dist/loader.mjs"
+
+if [[ -f "$LOCAL_TSX_LOADER" ]]; then
+  TSX_LOADER="$LOCAL_TSX_LOADER"
+elif [[ -f "$WORKSPACE_TSX_LOADER" ]]; then
+  TSX_LOADER="$WORKSPACE_TSX_LOADER"
+else
+  TSX_LOADER="tsx"
+fi
+
+exec node --import "$TSX_LOADER" "$SCRIPT_DIR/../src/index.ts" "$@"

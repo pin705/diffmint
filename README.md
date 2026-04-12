@@ -211,6 +211,16 @@ node scripts/cleanup.js kanban chat     # remove specific features
 
 Run `node scripts/cleanup.js --help` for all options. Delete `scripts/cleanup.js` when you're done.
 
+## Testing
+
+Use the workspace scripts to verify the monorepo end to end:
+
+- `pnpm test:unit` runs Vitest for shared packages and CLI flows
+- `pnpm test:e2e:install` installs Chromium for Playwright on a new machine
+- `pnpm test:e2e` boots the web app locally and runs smoke tests for landing, install, docs, and public client APIs
+- `pnpm test` runs unit plus e2e together
+- `pnpm check` runs typecheck plus docs validation
+
 ## Deploy
 
 This project includes a production-ready Dockerfile for the web app plus a root `compose.yml` for local development with hot reload. `Dockerfile.dev` is for local development only, while `apps/web/Dockerfile` builds the production web image. For all deployment options, see the [Next.js Deployment Documentation](https://nextjs.org/docs/app/getting-started/deploying).

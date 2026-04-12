@@ -8,6 +8,8 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
 
 # next.js
 /.next/
@@ -42,6 +44,7 @@ next-env.d.ts
 .idea/
 # clerk configuration (can include secrets)
 /.clerk/
+**/.clerk/
 
 
 # cursor 
