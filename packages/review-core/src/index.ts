@@ -115,13 +115,64 @@ function buildGitDiffArgs({
   return args;
 }
 
+function isUntrackedFile(cwd: string, filePath: string): boolean {
+  const status = tryRun('git', ['status', '--porcelain', '--', filePath], cwd);
+  return status?.trim().startsWith('??') ?? false;
+}
+
+function escapeDiffPath(filePath: string): string {
+  return filePath.replace(/\\/g, '/');
+}
+
+function buildUntrackedFileDiff(cwd: string, filePath: string): string {
+  const absolutePath = path.join(cwd, filePath);
+
+  if (!existsSync(absolutePath)) {
+    return '';
+  }
+
+  const normalizedPath = escapeDiffPath(filePath);
+  const content = readFileSync(absolutePath, 'utf8');
+  const contentLines = content.split('\n');
+  const lines = content.endsWith('\n') ? contentLines.slice(0, -1) : contentLines;
+  const diff = [
+    `diff --git a/${normalizedPath} b/${normalizedPath}`,
+    'new file mode 100644',
+    '--- /dev/null',
+    `+++ b/${normalizedPath}`
+  ];
+
+  if (lines.length > 0) {
+    diff.push(`@@ -0,0 +1,${lines.length} @@`);
+    diff.push(...lines.map((line) => `+${line}`));
+  }
+
+  return diff.join('\n');
+}
+
 export function createTraceId(): string {
   return randomUUID();
 }
 
 export function collectGitDiff(options: BuildReviewRequestOptions): string {
-  const diff = tryRun('git', buildGitDiffArgs(options), options.cwd);
-  return diff ?? '';
+  const diff = tryRun('git', buildGitDiffArgs(options), options.cwd) ?? '';
+  const files = options.files ?? [];
+
+  if (files.length === 0) {
+    return diff;
+  }
+
+  const changedFiles = new Set(detectChangedFiles(diff));
+  const syntheticDiffs = files
+    .filter((file) => !changedFiles.has(file) && isUntrackedFile(options.cwd, file))
+    .map((file) => buildUntrackedFileDiff(options.cwd, file))
+    .filter(Boolean);
+
+  if (syntheticDiffs.length === 0) {
+    return diff;
+  }
+
+  return [diff, ...syntheticDiffs].filter(Boolean).join('\n');
 }
 
 export function getCurrentBranch(cwd: string): string | undefined {

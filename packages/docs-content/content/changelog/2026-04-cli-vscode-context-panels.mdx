@@ -15,5 +15,8 @@ related:
 
 - CLI review output now follows a compact section model: overview, grouped context, severity summary, findings, and next steps.
 - `dm history` and `dm doctor` now default to human-readable terminal summaries, with `--json` reserved for automation and editor integrations.
+- `dm history` now supports provider/policy/source/query filters plus `--compare latest previous` for quick regression checks across sessions.
+- Diffmint can now load `.diffmint/review-conventions.json` to tune prompt profile, grouped context limits, and code excerpt size per repo.
 - The VS Code extension now uses richer result panels for review, history, doctor, and sign-in flows instead of generic raw output views.
 - A new `Quick Actions` section keeps sign-in, review, history, doctor, and team-rules entry points grouped in the activity bar.
+- A new `Findings` view mirrors the latest review into editor-native navigation, and findings are also published as VS Code diagnostics so engineers can jump straight to code.

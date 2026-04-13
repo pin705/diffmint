@@ -759,114 +759,126 @@ export function activate(context: vscode.ExtensionContext) {
       );
     }),
     vscode.commands.registerCommand('diffmint.searchHistory', async () => {
-      const query = await vscode.window.showInputBox({
-        prompt: 'Search trace ID, summary, provider, policy, or finding text',
-        placeHolder: 'auth, policy-v1, trace-123'
-      });
+      try {
+        const query = await vscode.window.showInputBox({
+          prompt: 'Search trace ID, summary, provider, policy, or finding text',
+          placeHolder: 'auth, policy-v1, trace-123'
+        });
 
-      if (!query) {
-        return;
+        if (!query) {
+          return;
+        }
+
+        const history = await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Diffmint History Search',
+            cancellable: false
+          },
+          async () => loadReviewHistoryFromCli()
+        );
+
+        if (!history) {
+          void vscode.window.showErrorMessage('Unable to parse Diffmint history as JSON.');
+          return;
+        }
+
+        const filtered = history.filter((session) =>
+          [
+            session.traceId,
+            session.summary,
+            session.provider,
+            session.model,
+            session.policyVersionId,
+            session.source,
+            session.commandSource,
+            session.context?.fileSummary,
+            ...session.findings.map((finding) => finding.title),
+            ...session.findings.map((finding) => finding.summary)
+          ]
+            .filter(Boolean)
+            .join('\n')
+            .toLowerCase()
+            .includes(query.toLowerCase())
+        );
+
+        latestResultRef.current = {
+          title: `Diffmint History Search: ${query}`,
+          body: `${filtered.length} matching review session(s)`,
+          html: renderHistoryHtml(filtered),
+          updatedAt: new Date().toISOString()
+        };
+        providers.forEach((provider) => provider.refresh());
+        updateStatusBar(statusBar);
+        showResultsPanel(latestResultRef.current);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Diffmint history search failed: ${message}`);
       }
-
-      const history = await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: 'Diffmint History Search',
-          cancellable: false
-        },
-        async () => loadReviewHistoryFromCli()
-      );
-
-      if (!history) {
-        void vscode.window.showErrorMessage('Unable to parse Diffmint history as JSON.');
-        return;
-      }
-
-      const filtered = history.filter((session) =>
-        [
-          session.traceId,
-          session.summary,
-          session.provider,
-          session.model,
-          session.policyVersionId,
-          session.source,
-          session.commandSource,
-          session.context?.fileSummary,
-          ...session.findings.map((finding) => finding.title),
-          ...session.findings.map((finding) => finding.summary)
-        ]
-          .filter(Boolean)
-          .join('\n')
-          .toLowerCase()
-          .includes(query.toLowerCase())
-      );
-
-      latestResultRef.current = {
-        title: `Diffmint History Search: ${query}`,
-        body: `${filtered.length} matching review session(s)`,
-        html: renderHistoryHtml(filtered),
-        updatedAt: new Date().toISOString()
-      };
-      providers.forEach((provider) => provider.refresh());
-      showResultsPanel(latestResultRef.current);
     }),
     vscode.commands.registerCommand('diffmint.compareHistory', async () => {
-      const history = await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: 'Diffmint Compare History',
-          cancellable: false
-        },
-        async () => loadReviewHistoryFromCli()
-      );
-
-      if (!history || history.length < 2) {
-        void vscode.window.showInformationMessage(
-          'Diffmint needs at least two review sessions to compare history.'
+      try {
+        const history = await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Diffmint Compare History',
+            cancellable: false
+          },
+          async () => loadReviewHistoryFromCli()
         );
-        return;
-      }
 
-      const firstPick = await vscode.window.showQuickPick(
-        history.map((session) => ({
-          label: formatHistoryPickLabel(session),
-          description: session.provider ?? 'unknown',
-          session
-        })),
-        {
-          placeHolder: 'Select the first review session'
+        if (!history || history.length < 2) {
+          void vscode.window.showInformationMessage(
+            'Diffmint needs at least two review sessions to compare history.'
+          );
+          return;
         }
-      );
 
-      if (!firstPick) {
-        return;
-      }
-
-      const secondPick = await vscode.window.showQuickPick(
-        history
-          .filter((session) => session.traceId !== firstPick.session.traceId)
-          .map((session) => ({
+        const firstPick = await vscode.window.showQuickPick(
+          history.map((session) => ({
             label: formatHistoryPickLabel(session),
             description: session.provider ?? 'unknown',
             session
           })),
-        {
-          placeHolder: 'Select the second review session'
+          {
+            placeHolder: 'Select the first review session'
+          }
+        );
+
+        if (!firstPick) {
+          return;
         }
-      );
 
-      if (!secondPick) {
-        return;
+        const secondPick = await vscode.window.showQuickPick(
+          history
+            .filter((session) => session.traceId !== firstPick.session.traceId)
+            .map((session) => ({
+              label: formatHistoryPickLabel(session),
+              description: session.provider ?? 'unknown',
+              session
+            })),
+          {
+            placeHolder: 'Select the second review session'
+          }
+        );
+
+        if (!secondPick) {
+          return;
+        }
+
+        latestResultRef.current = {
+          title: 'Diffmint History Compare',
+          body: `${firstPick.session.traceId} vs ${secondPick.session.traceId}`,
+          html: renderHistoryCompareHtml(firstPick.session, secondPick.session),
+          updatedAt: new Date().toISOString()
+        };
+        providers.forEach((provider) => provider.refresh());
+        updateStatusBar(statusBar);
+        showResultsPanel(latestResultRef.current);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Diffmint history comparison failed: ${message}`);
       }
-
-      latestResultRef.current = {
-        title: 'Diffmint History Compare',
-        body: `${firstPick.session.traceId} vs ${secondPick.session.traceId}`,
-        html: renderHistoryCompareHtml(firstPick.session, secondPick.session),
-        updatedAt: new Date().toISOString()
-      };
-      providers.forEach((provider) => provider.refresh());
-      showResultsPanel(latestResultRef.current);
     }),
     vscode.commands.registerCommand(
       'diffmint.openFinding',

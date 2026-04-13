@@ -2,6 +2,7 @@ import Providers from '@/components/layout/providers';
 import { Toaster } from '@/components/ui/sonner';
 import { fontVariables } from '@/components/themes/font.config';
 import { DEFAULT_THEME, THEMES } from '@/components/themes/theme.config';
+import { isClerkEnabled } from '@/lib/clerk/flags';
 import ThemeProvider from '@/components/themes/theme-provider';
 import { siteConfig } from '@/lib/site';
 import { cn } from '@/lib/utils';
@@ -72,6 +73,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const activeThemeValue = cookieStore.get('active_theme')?.value;
   const isValidTheme = THEMES.some((t) => t.value === activeThemeValue);
   const themeToApply = isValidTheme ? activeThemeValue! : DEFAULT_THEME;
+  const clerkEnabled = isClerkEnabled();
+  const clerkPublishableKey = clerkEnabled
+    ? process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim()
+    : undefined;
 
   return (
     <html lang='en' suppressHydrationWarning data-theme={themeToApply}>
@@ -105,7 +110,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           disableTransitionOnChange
           enableColorScheme
         >
-          <Providers activeThemeValue={themeToApply}>
+          <Providers
+            activeThemeValue={themeToApply}
+            clerkEnabled={clerkEnabled}
+            clerkPublishableKey={clerkPublishableKey}
+          >
             <Toaster />
             {children}
           </Providers>

@@ -154,5 +154,13 @@ describe('vscode extension helpers', () => {
     expect(compareHtml).toContain('Finding Deltas');
     expect(compareHtml).toContain('trace-1');
     expect(compareHtml).toContain('trace-2');
+    expect(
+      compareHtml
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    ).toMatchInlineSnapshot(
+      `"Diffmint Compare two recent review sessions. Use this view to confirm whether the latest review tightened scope, reduced severity, or introduced new findings. Session A Trace ID trace-1 Summary One finding recorded. Severity Critical 0 | High 1 | Medium 0 | Low 0 Scope apps/web/src/app/api/client/history/route.ts Session B Trace ID trace-2 Summary Second review Severity Critical 0 | High 1 | Medium 0 | Low 0 Scope apps/web/src/app/api/client/history/route.ts Finding Deltas Only in A Sensitive route changed Only in B None"`
+    );
   });
 });

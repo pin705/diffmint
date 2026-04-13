@@ -71,6 +71,8 @@ regression protection, or faster local validation.
 ```bash
 dm history
 dm history --json
+dm history --provider qwen --query auth
+dm history --compare latest previous
 dm doctor
 dm doctor --json
 ```
@@ -81,6 +83,13 @@ connection still agree.
 `dm history` now defaults to a grouped terminal summary with scope, severity, and completion time.
 Use `dm history --json` for scripting or extension integrations. `dm doctor` follows the same rule:
 plain text by default for humans, `--json` for tooling.
+
+Use history filters when local context starts to grow:
+
+- `--provider`, `--policy`, and `--source` narrow the session list before rendering
+- `--query` searches trace ID, summary, scope, provider, policy, and finding text
+- `--limit` trims long local histories without losing the grouped summary format
+- `--compare <left> <right>` compares two sessions by trace ID, prefix, `latest`, or `previous`
 
 ## Output modes
 
@@ -105,3 +114,25 @@ Diffmint review output now follows a compact convention inspired by stronger age
 - `Next Steps` to turn the review into a concrete validation plan
 
 This keeps long diffs readable without flooding the terminal with raw file lists.
+
+## Team review conventions
+
+Diffmint can load workspace review conventions from `.diffmint/review-conventions.json` in the
+current repo root:
+
+```json
+{
+  "promptProfile": "diffmint-team-web-v2",
+  "additionalPriorities": [
+    "Prefer crisp findings over speculative commentary.",
+    "Prioritize auth, policy, and release regressions before style feedback."
+  ],
+  "reviewNotes": ["Include a concrete validation step for every high-severity finding."],
+  "snippetContextLines": 2,
+  "maxVisibleFiles": 5,
+  "maxFileGroups": 6
+}
+```
+
+This lets teams tune review prompt profile, code excerpt size, and grouped context limits without
+forking the CLI. `dm doctor` reports whether the convention file is loaded, missing, or invalid.

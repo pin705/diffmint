@@ -141,6 +141,35 @@ describe('review core', () => {
     expect(terminal).toContain('force-dynamic');
   });
 
+  it('includes untracked selected files in the synthesized review diff', () => {
+    const repoDir = makeTempDir('diffmint-review-core-');
+    const filePath = 'packages/docs-content/content/cli/reference.mdx';
+
+    runGit(repoDir, ['init']);
+    runGit(repoDir, ['config', 'user.email', 'team@diffmint.io']);
+    runGit(repoDir, ['config', 'user.name', 'Diffmint Tests']);
+
+    writeFileSync(path.join(repoDir, 'README.md'), '# Diffmint\n', 'utf8');
+    runGit(repoDir, ['add', '.']);
+    runGit(repoDir, ['commit', '-m', 'init']);
+
+    mkdirSync(path.join(repoDir, 'packages/docs-content/content/cli'), { recursive: true });
+    writeFileSync(path.join(repoDir, filePath), '# Docs\nUpdated guidance.\n', 'utf8');
+
+    const request = buildReviewRequest({
+      cwd: repoDir,
+      source: 'selected_files',
+      files: [filePath]
+    });
+    const session = createReviewSession(request);
+
+    expect(request.diff).toContain(`diff --git a/${filePath} b/${filePath}`);
+    expect(request.diff).toContain('new file mode 100644');
+    expect(session.findings.some((finding) => finding.title === 'Governance content changed')).toBe(
+      true
+    );
+  });
+
   it('redacts sensitive values and omits raw provider output for cloud sync', () => {
     const sanitized = sanitizeReviewSessionForCloudSync({
       id: 'review-redacted',

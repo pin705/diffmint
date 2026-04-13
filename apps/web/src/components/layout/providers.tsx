@@ -1,28 +1,31 @@
 'use client';
 import { ClerkProvider } from '@clerk/nextjs';
 import { dark } from '@clerk/themes';
-import { isClerkClientEnabled } from '@/lib/clerk/flags';
 import { useTheme } from 'next-themes';
 import React from 'react';
 import { ActiveThemeProvider } from '../themes/active-theme';
 
 export default function Providers({
   activeThemeValue,
+  clerkEnabled,
+  clerkPublishableKey,
   children
 }: {
   activeThemeValue: string;
+  clerkEnabled: boolean;
+  clerkPublishableKey?: string;
   children: React.ReactNode;
 }) {
   const { resolvedTheme } = useTheme();
-  const clerkEnabled = isClerkClientEnabled();
 
-  if (!clerkEnabled) {
+  if (!clerkEnabled || !clerkPublishableKey) {
     return <ActiveThemeProvider initialTheme={activeThemeValue}>{children}</ActiveThemeProvider>;
   }
 
   return (
     <ActiveThemeProvider initialTheme={activeThemeValue}>
       <ClerkProvider
+        publishableKey={clerkPublishableKey}
         appearance={{
           baseTheme: resolvedTheme === 'dark' ? dark : undefined,
           variables: {

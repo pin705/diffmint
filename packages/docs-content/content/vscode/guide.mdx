@@ -21,6 +21,8 @@ away:
 - Review Current Changes
 - Review Staged Changes
 - Open Review History
+- Search Review History
+- Compare Recent Sessions
 - Run Doctor
 - Open Team Rules
 
@@ -32,6 +34,8 @@ away:
 - Explain Current File
 - Generate Tests for Current File
 - Open Review History
+- Search Review History
+- Compare Recent Sessions
 - Open Team Rules
 - Sign In / Switch Workspace
 
@@ -39,17 +43,24 @@ away:
 
 - Review results now open in a structured webview with `Overview`, `Review Context`, `Findings`,
   and artifact sections instead of dumping raw terminal text.
+- Each finding can include file location and a compact code excerpt so the review stays code-first
+  instead of summary-only.
 - History panels group each session by summary, severity, and scope so long local histories stay
   scannable.
+- Compare panels call out severity changes and finding deltas between two sessions.
 - Doctor panels separate readiness checks from raw output so auth and control-plane issues are
   easier to spot.
 
 ## Workspace and history
 
 - `Review Results` keeps the latest grouped output visible from the sidebar.
+- `Findings` turns the latest review into a focused list. Selecting a finding opens the file and
+  reveals the reported line inside the editor.
 - `History` shows recent local or synced sessions using the same severity-first summary as the CLI.
 - `Workspace` keeps the active workspace, provider, policy version, and sync mode visible without
   leaving the editor.
+- Review findings are also mirrored into the VS Code Problems panel through extension diagnostics,
+  which makes it easier to jump between issues without leaving editor-native workflows.
 
 ## Extension runtime
 
