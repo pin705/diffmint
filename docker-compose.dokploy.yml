@@ -79,8 +79,19 @@ services:
       DIFFMINT_RELEASE_SIGNING_PRIVATE_KEY: ${DIFFMINT_RELEASE_SIGNING_PRIVATE_KEY:-}
       DIFFMINT_RELEASE_SIGNING_KEY_ID: ${DIFFMINT_RELEASE_SIGNING_KEY_ID:-}
       DIFFMINT_ENABLE_HSTS: ${DIFFMINT_ENABLE_HSTS:-true}
+    networks:
+      - default
+      - dokploy-network
     expose:
       - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.diffmint-web.rule=Host(`${DOKPLOY_DOMAIN}`)"
+      - "traefik.http.routers.diffmint-web.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.diffmint-web.tls=true"
+      - "traefik.http.routers.diffmint-web.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.diffmint-web.loadbalancer.server.port=3000"
     healthcheck:
       test:
         [
@@ -91,6 +102,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+
+networks:
+  dokploy-network:
+    external: true
 
 volumes:
   diffmint-postgres-data:
