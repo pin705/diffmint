@@ -140,16 +140,19 @@ What the Dokploy stack does:
 - runs `pnpm --dir apps/web db:migrate` once before the app boots
 - builds the production web image from `apps/web/Dockerfile`
 - keeps the app listening on container port `3000` without binding that port on the host
-- attaches the `web` service to `dokploy-network` and ships Traefik labels directly in the compose file
 - forces persistent control-plane storage with `DIFFMINT_REQUIRE_PERSISTENCE=true`
 
-Required Dokploy environment values for routing:
+After deploy, configure routing in Dokploy:
 
-- `DOKPLOY_DOMAIN=diffmint.example.com`
-- `TRAEFIK_ENTRYPOINT=websecure`
-- `TRAEFIK_CERT_RESOLVER=letsencrypt`
-
-If you use this compose file, do not also configure a second router for the same host in the Dokploy `Domains` tab. The route is already declared in Docker labels.
+- open the Docker Compose app in Dokploy and go to `Domains`
+- add your host, for example `diffmint.example.com`
+- select the `web` service
+- set `Path` to `/`
+- leave `Internal Path` empty
+- keep `Strip Path` disabled
+- set `Container Port` to `3000`
+- enable `HTTPS` and choose `letsencrypt`
+- redeploy after saving the domain so Traefik reloads the route
 
 ## Environment
 
