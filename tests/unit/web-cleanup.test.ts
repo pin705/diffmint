@@ -35,6 +35,7 @@ describe('web cleanup', () => {
       'apps/web/src/app/dashboard/product',
       'apps/web/src/app/dashboard/react-query',
       'apps/web/src/app/dashboard/users',
+      'apps/web/public/robots.txt',
       'apps/web/src/components/layout/cta-github.tsx',
       'apps/web/src/features/chat',
       'apps/web/src/features/forms',

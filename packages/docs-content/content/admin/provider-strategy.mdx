@@ -1,11 +1,12 @@
 ---
 title: Provider Strategy
-description: Managed provider, BYOK, model allow-lists, and fallback controls all live in the control plane.
+description: Decide who owns provider access, which models are allowed, and how fallback should work.
 section: Admin Guide
 order: 20
 surfaces:
   - admin
   - web
+updatedAt: '2026-04-13'
 related:
   - /docs/security/privacy-and-redaction
   - /docs/concepts/qwen-integration
@@ -13,15 +14,36 @@ related:
 
 # Provider Strategy
 
-Each workspace should choose one of two provider modes:
+Every workspace should choose one provider operating model before broad rollout. Keep the decision
+explicit so users know who owns credentials, model choice, and failure handling.
 
-- Managed provider by the Diffmint platform
-- Bring your own key with explicit model allow-lists
+## Operating models
 
-Recommended defaults:
+### Managed provider
+
+Choose this when the platform team wants one centrally managed experience with the least user-side
+setup burden.
+
+### Bring your own key
+
+Choose this when security, procurement, or business constraints require each workspace to own its
+own provider credentials and model access.
+
+## Recommended defaults
 
 - one primary provider
-- one fallback provider
-- default model pinned per workspace
-- rate limit by workspace
-- secret rotation and audit ownership defined up front
+- one fallback strategy
+- one default model pinned per workspace
+- workspace-level rate and spend ownership
+- explicit secret rotation ownership
+- model allow-lists defined before rollout, not after incidents
+
+## Decision checklist
+
+Confirm these before inviting the full team:
+
+1. Who owns provider credentials?
+2. Which models are approved by default?
+3. What happens when the preferred provider is unavailable?
+4. Who rotates secrets and audits access?
+5. Which choices are user-configurable versus workspace-wide?

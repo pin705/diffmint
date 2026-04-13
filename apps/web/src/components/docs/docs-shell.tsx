@@ -1,4 +1,10 @@
 import Link from 'next/link';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import type { DocsNavGroup } from '@diffmint/docs-content';
 import type { ReactNode } from 'react';
@@ -10,6 +16,7 @@ interface DocsShellProps {
   description: string;
   children: ReactNode;
   aside?: ReactNode;
+  frameContent?: boolean;
   variant?: 'public' | 'dashboard';
 }
 
@@ -20,6 +27,7 @@ export function DocsShell({
   description,
   children,
   aside,
+  frameContent = true,
   variant = 'public'
 }: DocsShellProps) {
   return (
@@ -63,6 +71,44 @@ export function DocsShell({
       </aside>
 
       <article className='min-w-0'>
+        <div className='mb-6 lg:hidden'>
+          <div className='rounded-3xl border bg-card/70 p-4 backdrop-blur'>
+            <div className='mb-2'>
+              <p className='text-sm font-semibold'>Browse docs</p>
+              <p className='text-muted-foreground mt-1 text-sm'>
+                Move through the docs by section on mobile.
+              </p>
+            </div>
+            <Accordion type='multiple' className='w-full'>
+              {navigation.map((group) => (
+                <AccordionItem key={group.section} value={group.section}>
+                  <AccordionTrigger className='py-3 text-sm'>{group.section}</AccordionTrigger>
+                  <AccordionContent className='space-y-1'>
+                    {group.items.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={
+                          variant === 'dashboard'
+                            ? item.href.replace('/docs/', '/dashboard/docs/')
+                            : item.href
+                        }
+                        className={cn(
+                          'block rounded-xl px-3 py-2 text-sm transition-colors',
+                          currentHref.endsWith(item.href)
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        {item.title}
+                      </Link>
+                    ))}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </div>
+
         <div className='mb-8 space-y-3'>
           <p className='text-primary text-sm font-medium uppercase tracking-[0.24em]'>
             {variant === 'dashboard' ? 'Docs Center' : 'Documentation'}
@@ -70,9 +116,13 @@ export function DocsShell({
           <h1 className='text-4xl font-semibold tracking-tight text-balance'>{title}</h1>
           <p className='text-muted-foreground max-w-3xl text-lg leading-8'>{description}</p>
         </div>
-        <div className='rounded-[2rem] border bg-background/80 px-6 py-8 shadow-sm sm:px-8'>
-          {children}
-        </div>
+        {frameContent ? (
+          <div className='rounded-[2rem] border bg-background/80 px-6 py-8 shadow-sm sm:px-8'>
+            {children}
+          </div>
+        ) : (
+          children
+        )}
       </article>
 
       <aside className='hidden lg:block'>

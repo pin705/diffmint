@@ -26,7 +26,6 @@ import {
   IconClipboardText,
   IconClock,
   IconCode,
-  IconCommand,
   IconCreditCard,
   IconDeviceLaptop,
   IconDots,
@@ -90,6 +89,38 @@ import {
   IconX
 } from '@tabler/icons-react';
 
+function DiffmintLogo({
+  size = 24,
+  stroke = 'currentColor',
+  strokeWidth = 1.9,
+  className,
+  ...props
+}: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke={typeof stroke === 'number' ? String(stroke) : stroke}
+      strokeWidth={strokeWidth}
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden='true'
+      className={className}
+      {...props}
+    >
+      <path d='M6 7.5 10 12 6 16.5' />
+      <path d='M18 7.5 14 12l4 4.5' opacity='0.58' />
+      <path d='M10 17.25h4.75' />
+      <path
+        d='M10.85 7.5h2.9c1.57 0 2.85 1.27 2.85 2.84 0 1.58-1.28 2.86-2.85 2.86H12.2'
+        opacity='0.8'
+      />
+    </svg>
+  );
+}
+
 export type Icon = React.ComponentType<IconProps>;
 
 export const Icons = {
@@ -140,7 +171,7 @@ export const Icons = {
   // Brand
   github: IconBrandGithub,
   twitter: IconBrandTwitter,
-  logo: IconCommand,
+  logo: DiffmintLogo,
 
   // Communication
   chat: IconMessage,

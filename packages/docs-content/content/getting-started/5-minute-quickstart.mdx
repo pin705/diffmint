@@ -1,6 +1,6 @@
 ---
 title: 5-Minute Quickstart
-description: Install Diffmint, sign in, run the first local-first review, and verify synced history.
+description: Reach a first successful review, confirm device approval, and verify synced history in minutes.
 section: Getting Started
 order: 10
 surfaces:
@@ -8,6 +8,7 @@ surfaces:
   - vscode
   - web
   - admin
+updatedAt: '2026-04-13'
 related:
   - /docs/getting-started/install-cli
   - /docs/getting-started/install-vscode-extension
@@ -16,35 +17,83 @@ related:
 
 # 5-Minute Quickstart
 
-Diffmint is a local-first review product. The primary experience lives in the CLI and VS Code extension. The web app exists to manage workspace settings, policies, billing, history, and audit.
+This is the fastest path from zero to a real Diffmint workflow. By the end of this guide, you
+will have authenticated a machine, approved the device session, run a review against real code,
+and confirmed that history is visible in the control plane.
 
-## Developer quickstart
+Diffmint is local-first by design. The primary experience lives in the CLI and VS Code extension.
+The web app is the control plane for workspace setup, policy, billing, history, and audit.
 
-1. Install the CLI.
-2. Run `dm auth login`.
-3. Sign in in the browser, select the right workspace if prompted, then approve the device session.
-4. Run a local review against your current branch.
-5. Open synced history in the dashboard.
+## What you need
+
+- A local checkout of the repository you want to review
+- `pnpm` available on your machine
+- Browser access for the one-time sign-in and device approval step
+- A workspace invitation if your team already operates Diffmint centrally
+
+## 1. Authenticate from the CLI
+
+Install dependencies and start the device login flow:
 
 ```bash
 pnpm install
 dm auth login
+```
+
+Your browser opens to the Diffmint sign-in flow. If your account belongs to multiple workspaces,
+switch to the correct one, then approve the device session explicitly. That approval step is what
+allows the CLI to fetch workspace bootstrap, read synced history, and upload review artifacts.
+
+## 2. Run a real review
+
+Run the review against your current work instead of a demo command:
+
+```bash
 dm review --base origin/main
+```
+
+What you should expect:
+
+- Diffmint inspects only the files needed for the review
+- Provider execution stays local-first unless your workspace sync rules say otherwise
+- Findings render directly in the terminal and can be synced into history when enabled
+
+If you prefer to review only staged files, use `dm review --staged`.
+
+## 3. Confirm history and machine health
+
+Once the review finishes, verify that the local machine and workspace connection are both healthy:
+
+```bash
 dm history
 dm doctor
 ```
 
-If the control plane is temporarily unavailable, Diffmint keeps review sync items locally and flushes
-them automatically on the next successful workspace-connected command.
+Success usually looks like this:
 
-## Admin quickstart
+- `dm history` returns recent review sessions for the active workspace
+- `dm doctor` confirms local runtime, auth state, and provider readiness
+- The dashboard history view shows the same session metadata after sync
 
-1. Create a workspace in the control plane.
-2. Choose a provider strategy.
-3. Publish a policy version.
-4. Invite the team.
-5. Share the CLI and VS Code install docs.
+If the control plane is temporarily unavailable, Diffmint keeps sync items locally and flushes them
+automatically on the next successful workspace-connected command.
 
-Read [Install the CLI](/docs/getting-started/install-cli) and [Install the VS Code extension](/docs/getting-started/install-vscode-extension) before rollout.
+## Admin rollout in parallel
 
-For a one-command local stack with Postgres and hot reload, use [Docker development](/docs/getting-started/docker-development).
+If you are setting up Diffmint for a team instead of just yourself, run this in parallel with the
+developer quickstart:
+
+1. Create the workspace.
+2. Choose the provider strategy.
+3. Publish the first policy version.
+4. Confirm billing and quota defaults.
+5. Invite a pilot group.
+6. Share the CLI and VS Code install guides.
+
+## Continue with the next guides
+
+- Read [Install the CLI](/docs/getting-started/install-cli) for the full terminal setup flow.
+- Read [Install the VS Code extension](/docs/getting-started/install-vscode-extension) if your
+  team will review from the editor.
+- Use [Docker development](/docs/getting-started/docker-development) for a one-command local stack
+  with Postgres and hot reload.

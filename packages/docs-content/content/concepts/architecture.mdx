@@ -1,6 +1,6 @@
 ---
 title: Architecture
-description: The production model spans a local runtime, control plane, data APIs, and optional remote jobs.
+description: Understand how the local runtime, control plane, client APIs, and governance layers work together.
 section: Concepts
 order: 30
 surfaces:
@@ -8,6 +8,7 @@ surfaces:
   - vscode
   - web
   - admin
+updatedAt: '2026-04-13'
 related:
   - /docs/concepts/qwen-integration
   - /docs/admin/provider-strategy
@@ -15,19 +16,40 @@ related:
 
 # Architecture
 
-Diffmint ships as three product surfaces with a shared contract layer.
+Diffmint is designed as multiple product surfaces with one operating model. The goal is to keep
+review close to the developer while still giving teams the control, history, and governance they
+need.
 
-## Surfaces
+## Product surfaces
 
 - CLI for terminal-first review workflows
-- VS Code extension for editor-native UX on top of the CLI
-- Web control plane for account, workspace, provider, billing, docs, history, and audit
+- VS Code extension for editor-native guidance on top of the CLI
+- Web control plane for workspace setup, providers, billing, docs, history, and audit
+
+These are not separate products. They are different entry points into the same system.
 
 ## Runtime layers
 
 1. Local runtime on the developer machine
-2. Control plane for auth, billing, settings, and history
+2. Control plane for auth, billing, settings, and workspace state
 3. Client API for auth exchange, config sync, ingestion, and release channels
 4. Optional remote jobs for future PR and batch workflows
+
+## What happens during a typical review
+
+1. A developer starts a review from the CLI or VS Code.
+2. The local runtime prepares the targeted files and policy context.
+3. Provider execution happens through the configured local or managed path.
+4. Selected review artifacts and metadata sync into workspace history when policy allows it.
+5. The control plane exposes history, policy version, audit information, and rollout state.
+
+## Why the architecture is split this way
+
+- Developers keep the speed and privacy boundary of a local workflow.
+- Workspace admins still get policy, billing, provider, and audit controls.
+- Release owners can coordinate CLI and editor rollout without treating the web app as the primary product.
+
+See [Qwen integration](/docs/concepts/qwen-integration) for the review-engine boundary and
+[Provider Strategy](/docs/admin/provider-strategy) for workspace-level ownership decisions.
 
 See [Qwen integration](/docs/concepts/qwen-integration) for the review engine boundary.

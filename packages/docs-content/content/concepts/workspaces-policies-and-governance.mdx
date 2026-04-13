@@ -1,6 +1,6 @@
 ---
 title: Workspaces, Policies, and Governance
-description: The core differentiator of Diffmint is policy-driven review with history and audit.
+description: Learn how workspace ownership, policy versions, and metadata make review governable at scale.
 section: Concepts
 order: 20
 surfaces:
@@ -8,6 +8,7 @@ surfaces:
   - vscode
   - web
   - admin
+updatedAt: '2026-04-13'
 related:
   - /docs/admin/workspace-setup
   - /docs/cli/reference
@@ -15,9 +16,10 @@ related:
 
 # Workspaces, Policies, and Governance
 
-Diffmint is not positioned as a general AI assistant. It is a governed review system for teams.
+Diffmint is not a generic assistant surface. It is a governed review system where policy and
+workspace context are part of the product, not an afterthought.
 
-## Workspace scope
+## What a workspace owns
 
 Each workspace owns:
 
@@ -27,7 +29,7 @@ Each workspace owns:
 - synced review history
 - audit events
 
-## Policy scope
+## What a policy version should capture
 
 Each review can carry:
 
@@ -37,3 +39,21 @@ Each review can carry:
 - trace ID
 
 That bundle makes review output searchable, enforceable, and auditable later.
+
+## Why the metadata matters
+
+Once teams scale, the question is no longer just “what did the model say?” It becomes:
+
+- which workspace approved this behavior?
+- which policy version was active at the time?
+- which provider and model produced the result?
+- can we audit, compare, or replay the decision later?
+
+## Recommended baseline
+
+Start simple:
+
+1. one workspace per operating boundary
+2. one published policy version before rollout
+3. one agreed provider strategy
+4. synced history enabled only when the team understands the privacy boundary

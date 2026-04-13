@@ -1,11 +1,12 @@
 ---
 title: Workspace Setup
-description: Create a workspace, choose the provider strategy, publish policies, and onboard the team.
+description: Create a workspace, choose provider ownership, publish the first policy, and onboard the team cleanly.
 section: Admin Guide
 order: 10
 surfaces:
   - admin
   - web
+updatedAt: '2026-04-13'
 related:
   - /docs/admin/provider-strategy
   - /docs/concepts/workspaces-policies-and-governance
@@ -13,16 +14,81 @@ related:
 
 # Workspace Setup
 
-## Admin rollout checklist
+This guide is for the person responsible for turning Diffmint into a repeatable team workflow
+rather than a one-off developer install.
 
-1. Create the workspace.
-2. Configure provider strategy.
-3. Publish the first policy version.
-4. Confirm billing and quota defaults.
-5. Invite members.
-6. Share the CLI and VS Code install guides.
+## Target outcome
 
-The dashboard is the control plane for this flow. Day-to-day reviews should still happen in the CLI or editor.
+After setup, your workspace should have:
+
+- a named workspace with the right owners
+- one primary provider strategy
+- a published baseline policy version
+- clear billing and quota defaults
+- a documented onboarding path for developers and reviewers
+
+The dashboard is the control plane for this flow. Day-to-day review still belongs in the CLI or
+editor.
+
+## Rollout order
+
+1. Create the workspace and confirm who owns admin decisions.
+2. Decide whether provider access is managed centrally or brought by each team.
+3. Publish the first policy version before broad rollout.
+4. Confirm billing, seat limits, and quota assumptions.
+5. Invite a pilot group first, then expand after the first healthy week.
+6. Share the install guides and the quickstart as the canonical onboarding packet.
+
+## What to do at each step
+
+### Create the workspace
+
+Choose a workspace name that will still make sense in audit, billing, and support contexts.
+Confirm which users can manage provider settings, member invites, and policy publication.
+
+### Set provider strategy
+
+Choose one primary operating model for the workspace. Keep the first rollout simple:
+
+- one primary provider
+- one approved model family
+- one fallback strategy
+- clear ownership of secrets and rotation
+
+### Publish the first policy version
+
+Avoid rolling out with implied rules. Publish a first policy version that sets expectations for:
+
+- which providers and models are allowed
+- what metadata must be captured
+- whether sync is enabled
+- how findings should be interpreted during pilot rollout
+
+### Confirm billing and quotas
+
+Before inviting the team, confirm:
+
+- the current plan and seat count
+- workspace credit expectations
+- who handles quota-related support
+- whether rollout should be limited to a smaller pilot first
+
+### Share the onboarding pack
+
+Give teams the shortest, cleanest starting path:
+
+1. [5-Minute Quickstart](/docs/getting-started/5-minute-quickstart)
+2. [Install the CLI](/docs/getting-started/install-cli)
+3. [Install the VS Code extension](/docs/getting-started/install-vscode-extension)
+
+## Operating rhythm after launch
+
+Once the workspace is live, admins usually repeat four motions:
+
+- publish updated policy versions as standards change
+- review provider defaults and fallback behavior
+- export history or audit data for governance reviews
+- tighten rollout guidance based on real usage patterns
 
 After rollout, admins can export synced review history and audit trail CSVs directly from the
 dashboard for governance reviews, support handoffs, or compliance workflows.

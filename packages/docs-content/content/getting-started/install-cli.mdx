@@ -1,11 +1,12 @@
 ---
 title: Install the CLI
-description: Set up the Diffmint terminal workflow and connect it to the control plane.
+description: Install the terminal workflow, approve the device, and verify the machine is review-ready.
 section: Getting Started
 order: 20
 surfaces:
   - cli
   - admin
+updatedAt: '2026-04-13'
 related:
   - /docs/cli/reference
   - /docs/concepts/local-first-review
@@ -13,30 +14,44 @@ related:
 
 # Install the CLI
 
-The CLI is the canonical entry point for reviews, explain flows, test generation, history, and diagnostics.
+The CLI is the canonical Diffmint surface. It is where reviews, explain flows, test generation,
+history checks, and diagnostics are expected to start.
 
-## Install
+## What this setup gives you
+
+- Review commands that stay close to your local git workflow
+- Browser-based device auth tied to the correct workspace
+- Diagnostics that verify runtime, auth, and provider readiness
+- A stable foundation for both terminal and VS Code usage
+
+## 1. Install dependencies
 
 ```bash
 pnpm install
 ```
 
-## Sign in and select a workspace
+## 2. Sign in and approve the machine
 
 ```bash
 dm auth login
+```
+
+The browser flow lands on a dedicated device approval page. Sign in, switch to the correct
+workspace if needed, approve the device session, then return to the terminal. Approval is required
+before the CLI can fetch workspace bootstrap or sync review history.
+
+## 3. Verify provider and machine health
+
+```bash
 dm config set-provider qwen
 dm doctor
 ```
-
-The browser step now lands on a dedicated device approval page. Sign in, switch to the correct
-workspace if needed, approve the device session, then return to the terminal.
 
 If `qwen` is available on your machine and your provider credentials are configured, review runs
 will use Qwen headless mode automatically. Otherwise Diffmint stays in scaffold mode so onboarding
 and local testing still work.
 
-## Typical review commands
+## 4. Run the commands users depend on most
 
 ```bash
 dm review --staged
@@ -46,6 +61,20 @@ dm explain src/app/page.tsx
 dm tests src/lib/review.ts
 ```
 
-See the full [CLI reference](/docs/cli/reference) for flags and JSON output.
+These commands cover the day-to-day workflow:
+
+- `review` for code review from the terminal
+- `explain` for targeted explanation on a file or surface
+- `tests` for test scaffolding and coverage help
+
+## What good installation looks like
+
+You are done when:
+
+- `dm auth login` completes without a pending approval step
+- `dm doctor` reports a healthy local environment
+- `dm review` can run without reconfiguring the machine
+
+See the full [CLI reference](/docs/cli/reference) for flags, output modes, and scripting support.
 
 For containerized local development with hot reload, see [Docker development](/docs/getting-started/docker-development).

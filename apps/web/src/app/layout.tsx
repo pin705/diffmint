@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { fontVariables } from '@/components/themes/font.config';
 import { DEFAULT_THEME, THEMES } from '@/components/themes/theme.config';
 import ThemeProvider from '@/components/themes/theme-provider';
+import { siteConfig } from '@/lib/site';
 import { cn } from '@/lib/utils';
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
@@ -16,17 +17,54 @@ const META_THEME_COLORS = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://diffmint.io'),
+  metadataBase: new URL(siteConfig.url),
+  applicationName: siteConfig.name,
   title: {
-    default: 'Diffmint',
-    template: '%s | Diffmint'
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`
   },
-  description:
-    'Diffmint is a local-first, policy-driven code review platform with CLI and VS Code as the primary experience.'
+  description: siteConfig.description,
+  keywords: [...siteConfig.keywords],
+  referrer: 'strict-origin-when-cross-origin',
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  alternates: {
+    canonical: '/'
+  },
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/icon',
+    apple: '/apple-icon'
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: siteConfig.name,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    url: siteConfig.url,
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: siteConfig.ogImageAlt
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: ['/twitter-image']
+  }
 };
 
 export const viewport: Viewport = {
-  themeColor: META_THEME_COLORS.light
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: META_THEME_COLORS.light },
+    { media: '(prefers-color-scheme: dark)', color: META_THEME_COLORS.dark }
+  ]
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

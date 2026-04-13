@@ -44,6 +44,12 @@ const components = {
   ol: (props: HTMLAttributes<HTMLOListElement>) => (
     <ol className='text-muted-foreground mt-4 list-decimal space-y-2 pl-6' {...props} />
   ),
+  blockquote: (props: HTMLAttributes<HTMLQuoteElement>) => (
+    <blockquote
+      className='border-primary/30 bg-muted/40 text-foreground mt-6 rounded-2xl border-l-4 px-5 py-4 italic'
+      {...props}
+    />
+  ),
   code: (props: HTMLAttributes<HTMLElement>) => (
     <code className='bg-muted rounded px-1.5 py-0.5 text-sm' {...props} />
   ),
@@ -53,12 +59,21 @@ const components = {
       {...props}
     />
   ),
+  table: (props: HTMLAttributes<HTMLTableElement>) => (
+    <table className='mt-6 w-full border-collapse overflow-hidden rounded-2xl border' {...props} />
+  ),
+  th: (props: HTMLAttributes<HTMLTableCellElement>) => (
+    <th className='bg-muted/60 border px-3 py-2 text-left font-semibold' {...props} />
+  ),
+  td: (props: HTMLAttributes<HTMLTableCellElement>) => (
+    <td className='border px-3 py-2 align-top' {...props} />
+  ),
   hr: () => <div className='border-border my-8 border-t' />
 };
 
 export async function DocMdx({ source }: { source: string }) {
   return (
-    <div className='[&_strong]:text-foreground [&_table]:mt-6 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:bg-muted/60 [&_th]:p-2'>
+    <div className='[&_strong]:text-foreground'>
       <MDXRemote
         source={source}
         components={components}

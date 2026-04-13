@@ -1,27 +1,43 @@
 ---
 title: Release Channels
-description: Stable, preview, and canary channels coordinate CLI and VS Code rollouts.
+description: Stable, preview, and canary channels help teams roll out CLI and VS Code updates safely.
 section: Release Channels
 order: 10
 surfaces:
   - cli
   - vscode
   - admin
+updatedAt: '2026-04-13'
 related:
-  - /docs/changelog/2026-04-foundation
+  - /docs/getting-started/install-cli
+  - /docs/getting-started/install-vscode-extension
 ---
 
 # Release Channels
 
-Diffmint should publish coordinated release metadata for both the CLI and VS Code extension.
+Release channels let teams move quickly without making every user absorb the same level of change
+at the same time.
 
-## Channels
+## Channel model
 
-- `stable` for the default production audience
-- `preview` for early adopters
-- `canary` for internal testing and fast feedback
+| Channel   | Intended audience | Recommended use                                                |
+| --------- | ----------------- | -------------------------------------------------------------- |
+| `stable`  | Most users        | Default production channel with the highest rollout confidence |
+| `preview` | Early adopters    | Validate upcoming changes before they become the default       |
+| `canary`  | Internal teams    | Fast feedback on packaging, install, and runtime changes       |
 
-Each release manifest should include version, checksum, download target, and changelog URL.
+## Release manifest expectations
+
+Each release manifest should include:
+
+- version
+- checksum
+- download target
+- release notes summary
+- channel assignment
+
+Users should not need to read raw internal changelog entries just to understand whether an update
+is safe for them.
 
 For production rollouts, Diffmint can also sign release manifests before returning them from the
 client API. When `DIFFMINT_RELEASE_SIGNING_PRIVATE_KEY` is configured, manifests include a stable
@@ -31,3 +47,9 @@ client API. When `DIFFMINT_RELEASE_SIGNING_PRIVATE_KEY` is configured, manifests
 - `keyId` for key rotation and rollout tracking
 - `signedAt` anchored to the manifest release timestamp
 - `value` as the base64 signature over the canonical manifest payload
+
+## Recommended rollout policy
+
+1. Ship to `canary` first for packaging and install validation.
+2. Promote to `preview` when runtime and upgrade behavior look healthy.
+3. Move to `stable` only after support, rollback, and release-note quality are all ready.

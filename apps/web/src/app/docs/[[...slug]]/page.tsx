@@ -5,10 +5,12 @@ import {
   getDocsNavigation,
   getRelatedDocs
 } from '@diffmint/docs-content';
+import { BrandLink } from '@/components/brand-logo';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DocsHome, DocsOverviewAside } from '@/components/docs/docs-home';
 import { DocsShell } from '@/components/docs/docs-shell';
 import { DocMdx } from '@/components/docs/mdx';
 
@@ -28,18 +30,57 @@ export async function generateMetadata({
 
   if (!doc) {
     return {
-      title: 'Docs'
+      title: 'Documentation',
+      description:
+        'Install Diffmint, understand the product model, and roll it out with polished end-user guidance.'
     };
   }
 
   return {
     title: doc.title,
-    description: doc.description
+    description: doc.description,
+    robots:
+      doc.section === 'Changelog'
+        ? {
+            index: false,
+            follow: false
+          }
+        : undefined
   };
 }
 
 export default async function DocsPage({ params }: { params: Promise<{ slug?: string[] }> }) {
   const { slug } = await params;
+  const navigation = getDocsNavigation();
+
+  if (!slug || slug.length === 0) {
+    return (
+      <main className='mx-auto min-h-screen max-w-7xl px-6 py-10'>
+        <div className='mb-8 flex items-center justify-between gap-4'>
+          <BrandLink priority size={40} />
+          <div className='flex items-center gap-2'>
+            <Button variant='ghost' asChild>
+              <Link href='/install'>Install</Link>
+            </Button>
+            <Button asChild>
+              <Link href='/auth/sign-in'>Sign In</Link>
+            </Button>
+          </div>
+        </div>
+        <DocsShell
+          currentHref='/docs'
+          navigation={navigation}
+          title='Documentation'
+          description='Self-serve onboarding, rollout guidance, command reference, and operating principles for teams using Diffmint.'
+          aside={<DocsOverviewAside />}
+          frameContent={false}
+        >
+          <DocsHome navigation={navigation} />
+        </DocsShell>
+      </main>
+    );
+  }
+
   const doc = getDocBySlug(slug);
 
   if (!doc) {
@@ -51,9 +92,7 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
   return (
     <main className='mx-auto min-h-screen max-w-7xl px-6 py-10'>
       <div className='mb-8 flex items-center justify-between gap-4'>
-        <Link href='/' className='text-lg font-semibold'>
-          Diffmint
-        </Link>
+        <BrandLink priority size={40} />
         <div className='flex items-center gap-2'>
           <Button variant='ghost' asChild>
             <Link href='/install'>Install</Link>
@@ -65,7 +104,7 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
       </div>
       <DocsShell
         currentHref={doc.href}
-        navigation={getDocsNavigation()}
+        navigation={navigation}
         title={doc.title}
         description={doc.description}
         aside={

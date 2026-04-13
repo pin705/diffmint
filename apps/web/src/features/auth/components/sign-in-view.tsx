@@ -1,5 +1,5 @@
+import { BrandLink } from '@/components/brand-logo';
 import { buttonVariants } from '@/components/ui/button';
-import { Icons } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { SignIn as ClerkSignInForm } from '@clerk/nextjs';
 import { Metadata } from 'next';
@@ -25,10 +25,13 @@ export default function SignInViewPage() {
       </Link>
       <div className='relative hidden h-full flex-col p-10 lg:flex dark:border-r'>
         <div className='absolute inset-0 bg-sidebar' />
-        <div className='text-sidebar-foreground relative z-20 flex items-center text-lg font-medium'>
-          <Icons.logo className='mr-2 h-6 w-6' />
-          Diffmint
-        </div>
+        <BrandLink
+          className='text-sidebar-foreground relative z-20'
+          imageClassName='rounded-2xl'
+          labelClassName='text-lg font-medium'
+          priority
+          size={38}
+        />
         <InteractiveGridPattern
           className={cn(
             'mask-[radial-gradient(400px_circle_at_center,white,transparent)]',

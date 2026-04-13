@@ -1,10 +1,11 @@
 ---
 title: CLI Reference
-description: The canonical command surface for Diffmint terminal workflows.
+description: The command surface for Diffmint review, explanation, testing, history, and diagnostics.
 section: CLI Reference
 order: 10
 surfaces:
   - cli
+updatedAt: '2026-04-13'
 related:
   - /docs/getting-started/install-cli
   - /docs/troubleshooting/auth-and-doctor
@@ -13,6 +14,8 @@ related:
 # CLI Reference
 
 ## Auth
+
+Use browser-based device auth to connect a machine to the correct workspace:
 
 ```bash
 dm auth login
@@ -30,6 +33,8 @@ the workspace control plane for support and release governance.
 dm config set-provider qwen
 ```
 
+Set the provider once per machine or workspace context, then validate with `dm doctor`.
+
 ## Review workflows
 
 ```bash
@@ -38,6 +43,13 @@ dm review --staged
 dm review --base origin/main
 dm review --files src/a.ts src/b.ts
 ```
+
+Use the mode that matches the scope of your intent:
+
+- `dm review` for the current working state
+- `dm review --staged` for the staged diff only
+- `dm review --base origin/main` for branch-level review
+- `dm review --files ...` for surgical review on a specific surface
 
 When Qwen Code is installed locally and a compatible provider key is present, `dm review`
 uses the Qwen headless runtime and records the raw provider output as an artifact. When Qwen is
@@ -51,12 +63,18 @@ dm explain src/lib/review.ts
 dm tests src/lib/review.ts
 ```
 
+Use `explain` when a file needs interpretation. Use `tests` when the next step is coverage,
+regression protection, or faster local validation.
+
 ## History and diagnostics
 
 ```bash
 dm history
 dm doctor
 ```
+
+These commands are the fastest way to verify that the local environment and control-plane
+connection still agree.
 
 ## Output modes
 
@@ -66,3 +84,6 @@ Use JSON for scripting and Markdown for artifacts:
 dm review --base origin/main --json
 dm review --base origin/main --markdown
 ```
+
+JSON is the right default for automation. Markdown is the right default for saved artifacts,
+handoffs, or human review outside the terminal.

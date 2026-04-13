@@ -16,6 +16,60 @@ export const docSections = [
   'Release Channels'
 ] as const;
 
+export const visibleDocSections = [
+  'Getting Started',
+  'Concepts',
+  'CLI Reference',
+  'VS Code Guide',
+  'Admin Guide',
+  'Security & Privacy',
+  'Troubleshooting',
+  'Release Channels'
+] as const satisfies readonly (typeof docSections)[number][];
+
+export type VisibleDocSection = (typeof visibleDocSections)[number];
+
+export const docsSectionMeta: Record<
+  VisibleDocSection,
+  {
+    description: string;
+    audience: string;
+  }
+> = {
+  'Getting Started': {
+    description: 'Install the product, sign in, and reach the first successful review fast.',
+    audience: 'Everyone'
+  },
+  Concepts: {
+    description: 'Understand how the CLI, editor, control plane, and policies fit together.',
+    audience: 'Developers and leads'
+  },
+  'CLI Reference': {
+    description: 'Command-level guidance for review, explain, tests, history, and diagnostics.',
+    audience: 'CLI users'
+  },
+  'VS Code Guide': {
+    description: 'Connect the editor companion to the local CLI and review workflows.',
+    audience: 'VS Code users'
+  },
+  'Admin Guide': {
+    description: 'Roll out workspaces, provider strategy, billing, and team governance.',
+    audience: 'Workspace admins'
+  },
+  'Security & Privacy': {
+    description: 'See exactly what stays local, what can sync, and which controls admins own.',
+    audience: 'Security and platform teams'
+  },
+  Troubleshooting: {
+    description: 'Fix auth, setup, and diagnostics issues without losing momentum.',
+    audience: 'Anyone getting unstuck'
+  },
+  'Release Channels': {
+    description: 'Coordinate safe CLI and VS Code rollouts across stable, preview, and canary.',
+    audience: 'Release owners'
+  }
+};
+
 const surfaceValues = ['cli', 'vscode', 'web', 'admin'] as const;
 
 export const docFrontmatterSchema = z.object({
@@ -73,6 +127,17 @@ function extractInternalLinks(body: string): string[] {
   return [...new Set([...links].map((match) => match[1]))];
 }
 
+function stripLeadingTitleHeading(body: string, title: string): string {
+  const trimmed = body.trim();
+  const lines = trimmed.split('\n');
+
+  if (lines[0]?.trim() === `# ${title}`) {
+    return lines.slice(1).join('\n').trim();
+  }
+
+  return trimmed;
+}
+
 function parseDoc(filePath: string): DocPage {
   const raw = readFileSync(filePath, 'utf8');
   const parsed = matter(raw);
@@ -87,7 +152,7 @@ function parseDoc(filePath: string): DocPage {
     slugSegments,
     href: `/docs/${slug}`,
     filePath,
-    body: parsed.content.trim(),
+    body: stripLeadingTitleHeading(parsed.content, frontmatter.title),
     internalLinks: extractInternalLinks(parsed.content)
   };
 }
@@ -127,7 +192,7 @@ export function getDocBySlug(slugSegments?: string[]): DocPage | undefined {
 export function getDocsNavigation(): DocsNavGroup[] {
   const docs = getAllDocs();
 
-  return docSections
+  return visibleDocSections
     .map((section) => ({
       section,
       items: docs

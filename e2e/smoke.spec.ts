@@ -12,10 +12,15 @@ test('landing page leads into the quickstart docs flow', async ({ page }) => {
 
   await expect(
     page.getByRole('heading', {
-      name: /Policy-driven code review where the real work stays in the terminal and editor/i
+      name: /Catch risky diffs before the PR, then keep the audit trail attached/i
     })
   ).toBeVisible();
+  await expect(page.getByText('dm review --base origin/main').first()).toBeVisible();
   await expect(quickstartLink).toHaveAttribute('href', '/docs/getting-started/5-minute-quickstart');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    'content',
+    /local-first, policy-driven code review platform/i
+  );
 
   await page.goto('/docs/getting-started/5-minute-quickstart');
   await expect(page).toHaveURL(/\/docs\/getting-started\/5-minute-quickstart$/);
@@ -113,4 +118,42 @@ test('health endpoints expose live and readiness probes', async ({ request, base
   expect(readyPayload.service).toBe('diffmint-web');
   expect(['ok', 'warn']).toContain(readyPayload.status);
   expect(readyPayload.checks.some((check) => check.name === 'database')).toBeTruthy();
+});
+
+test('public seo routes expose robots, sitemap, manifest, and social images', async ({
+  request,
+  baseURL
+}) => {
+  if (!baseURL) {
+    throw new Error('Expected Playwright baseURL to be configured.');
+  }
+
+  const [robotsResponse, sitemapResponse, manifestResponse, ogImageResponse, twitterImageResponse] =
+    await Promise.all([
+      request.get(new URL('/robots.txt', baseURL).toString()),
+      request.get(new URL('/sitemap.xml', baseURL).toString()),
+      request.get(new URL('/manifest.webmanifest', baseURL).toString()),
+      request.get(new URL('/opengraph-image', baseURL).toString()),
+      request.get(new URL('/twitter-image', baseURL).toString())
+    ]);
+  const robotsText = await robotsResponse.text();
+  const sitemapText = await sitemapResponse.text();
+  const manifestText = await manifestResponse.text();
+
+  expect(robotsResponse.ok()).toBeTruthy();
+  expect(robotsText).toContain('Sitemap:');
+  expect(robotsText).toContain('Disallow: /dashboard/');
+
+  expect(sitemapResponse.ok()).toBeTruthy();
+  expect(sitemapText).toContain('/docs/getting-started/5-minute-quickstart');
+
+  expect(manifestResponse.ok()).toBeTruthy();
+  expect(manifestResponse.headers()['content-type']).toContain('application/manifest+json');
+  expect(manifestText).toContain('"name":"Diffmint"');
+
+  expect(ogImageResponse.ok()).toBeTruthy();
+  expect(ogImageResponse.headers()['content-type']).toContain('image/png');
+
+  expect(twitterImageResponse.ok()).toBeTruthy();
+  expect(twitterImageResponse.headers()['content-type']).toContain('image/png');
 });

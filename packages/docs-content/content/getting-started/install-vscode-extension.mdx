@@ -1,11 +1,12 @@
 ---
 title: Install the VS Code Extension
-description: Connect the editor companion to the local CLI and Diffmint workspace.
+description: Connect the editor companion to the local CLI and make review results feel native in VS Code.
 section: Getting Started
 order: 30
 surfaces:
   - vscode
   - admin
+updatedAt: '2026-04-13'
 related:
   - /docs/vscode/guide
   - /docs/getting-started/install-cli
@@ -13,17 +14,33 @@ related:
 
 # Install the VS Code Extension
 
-The extension is a companion to the CLI. It shells out to the local `dm` binary and renders results in editor-native panels.
+The VS Code extension is a companion to the CLI. It shells out to the local `dm` binary and keeps
+the review flow inside the editor with native panels, command palette actions, and context-aware
+navigation.
+
+## Before you install
+
+- Install and authenticate the CLI first
+- Make sure the local machine can run `dm doctor` successfully
+- Decide whether the extension should point at production, self-hosted, or a local control plane
 
 ## Setup flow
 
-1. Install the CLI first.
-2. Install the VS Code extension.
-3. Confirm the extension can find the `dm` binary, or set `diffmint.cliPath`.
-4. Set `diffmint.webBaseUrl` if you are pointing the extension at a self-hosted or local control plane instead of `https://diffmint.io`.
-5. Click **Sign In** in the extension.
-6. Complete browser auth and return to the editor.
-7. Run **Review Current Changes**.
+1. Install the Diffmint VS Code extension.
+2. Confirm the extension can find the local `dm` binary, or set `diffmint.cliPath`.
+3. Set `diffmint.webBaseUrl` if you are pointing the extension at a self-hosted or local control plane instead of `https://diffmint.io`.
+4. Click **Sign In** in the extension.
+5. Complete browser auth and return to the editor.
+6. Run **Review Current Changes** from the command palette.
+
+## What the editor experience should feel like
+
+Once connected, users should be able to:
+
+- launch review from the current file, staged changes, or working tree
+- inspect findings without leaving the editor
+- jump from results back into the exact file location that needs attention
+- stay aligned with the same workspace and policy model used by the CLI
 
 ## Expected commands
 
@@ -37,7 +54,7 @@ The extension uses the same flows as the CLI:
 
 Read the [VS Code guide](/docs/vscode/guide) for command mapping and result panels.
 
-## Packaging
+## Packaging for internal rollout
 
 For internal rollout or release automation, package the extension as a VSIX:
 

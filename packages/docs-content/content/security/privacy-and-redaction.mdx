@@ -1,6 +1,6 @@
 ---
 title: Privacy and Redaction
-description: Local-first review, selective sync, explicit consent, and redaction guardrails.
+description: See what stays local by default, what can sync, and which guardrails admins control.
 section: Security & Privacy
 order: 10
 surfaces:
@@ -8,6 +8,7 @@ surfaces:
   - vscode
   - web
   - admin
+updatedAt: '2026-04-13'
 related:
   - /docs/concepts/local-first-review
   - /docs/admin/provider-strategy
@@ -15,26 +16,56 @@ related:
 
 # Privacy and Redaction
 
-## Default posture
+## Core principles
 
 - local-first review
 - no full-repo upload by default
 - selected artifact sync only
-- explicit workspace-level cloud sync controls
+- explicit workspace-level sync controls
 - baseline web security headers on pages and APIs
+
+## What stays local by default
+
+The default posture is intentionally conservative:
+
+- repository state stays on the local machine unless a feature explicitly needs selected artifacts
+- raw provider output remains local by default
+- review runs do not assume that full source code should leave the machine
+
+## What may sync when workspace history is enabled
+
+Teams that enable synced history should assume the control plane can store:
+
+- policy metadata
+- provider and model metadata
+- selected findings
+- trace and session identifiers
+- workflow status tied to a review session
+
+That visibility is what makes history, audit, and governance useful later.
 
 ## Admin controls
 
-- turn cloud sync on or off
+- turn synced history on or off
 - require redaction before sync
 - restrict allowed providers and models
-- configure retention windows for audit history
+- configure retention windows for audit and history
 - require persistent storage in production to avoid in-memory fallback during outages
 
-## Developer expectations
-
-Always assume policy metadata, trace IDs, and selected findings may sync when cloud history is enabled.
+## Redaction behavior
 
 Before synced review history leaves the local machine, Diffmint redacts common secret formats such
-as bearer tokens, API keys, and secret-style assignments. Raw provider output is kept local by
-default and replaced with a redacted placeholder in synced artifacts.
+as bearer tokens, API keys, and secret-style assignments. When a workspace keeps raw provider
+output local-only, synced artifacts use a redacted placeholder instead of shipping the original
+content.
+
+## What teams should communicate clearly
+
+Every rollout should explain three things in plain language:
+
+1. what always stays local
+2. what metadata may sync when history is enabled
+3. who owns provider and retention policy decisions
+
+Always assume policy metadata, trace IDs, and selected findings may sync when workspace history is
+enabled.
