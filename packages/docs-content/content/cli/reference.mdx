@@ -70,11 +70,17 @@ regression protection, or faster local validation.
 
 ```bash
 dm history
+dm history --json
 dm doctor
+dm doctor --json
 ```
 
 These commands are the fastest way to verify that the local environment and control-plane
 connection still agree.
+
+`dm history` now defaults to a grouped terminal summary with scope, severity, and completion time.
+Use `dm history --json` for scripting or extension integrations. `dm doctor` follows the same rule:
+plain text by default for humans, `--json` for tooling.
 
 ## Output modes
 
@@ -87,3 +93,15 @@ dm review --base origin/main --markdown
 
 JSON is the right default for automation. Markdown is the right default for saved artifacts,
 handoffs, or human review outside the terminal.
+
+## Context conventions
+
+Diffmint review output now follows a compact convention inspired by stronger agent CLIs:
+
+- `Overview` for trace, provider, model, and policy identity
+- `Context` for grouped file scope, diff size, and visible file list
+- `Severity Summary` to collapse risk counts before the details
+- `Findings` for actionable review items only
+- `Next Steps` to turn the review into a concrete validation plan
+
+This keeps long diffs readable without flooding the terminal with raw file lists.

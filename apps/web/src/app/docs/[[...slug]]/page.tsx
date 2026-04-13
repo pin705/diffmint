@@ -1,16 +1,14 @@
 import type { Metadata } from 'next';
 import {
   getAllDocs,
+  getAdjacentDocs,
   getDocBySlug,
   getDocsNavigation,
   getRelatedDocs
 } from '@diffmint/docs-content';
-import { BrandLink } from '@/components/brand-logo';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DocsHome, DocsOverviewAside } from '@/components/docs/docs-home';
+import { DocsPager, DocsPublicHeader, DocsRelatedRail } from '@/components/docs/docs-page-parts';
 import { DocsShell } from '@/components/docs/docs-shell';
 import { DocMdx } from '@/components/docs/mdx';
 
@@ -55,28 +53,24 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
 
   if (!slug || slug.length === 0) {
     return (
-      <main className='mx-auto min-h-screen max-w-7xl px-6 py-10'>
-        <div className='mb-8 flex items-center justify-between gap-4'>
-          <BrandLink priority size={40} />
-          <div className='flex items-center gap-2'>
-            <Button variant='ghost' asChild>
-              <Link href='/install'>Install</Link>
-            </Button>
-            <Button asChild>
-              <Link href='/auth/sign-in'>Sign In</Link>
-            </Button>
-          </div>
+      <main className='relative min-h-screen overflow-hidden'>
+        <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.1),transparent_30%),linear-gradient(180deg,var(--background),color-mix(in_oklab,var(--muted)_18%,transparent))]' />
+        <div className='absolute inset-0 bg-[linear-gradient(to_right,color-mix(in_oklab,var(--border)_42%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--border)_42%,transparent)_1px,transparent_1px)] bg-[size:40px_40px] opacity-25' />
+
+        <div className='relative mx-auto min-h-screen max-w-[1480px] px-4 py-4 sm:px-6 lg:px-8'>
+          <DocsPublicHeader navigation={navigation} />
+          <DocsShell
+            currentHref='/docs'
+            navigation={navigation}
+            title='Documentation'
+            description='Self-serve onboarding, rollout guidance, command reference, and operating principles for teams using Diffmint.'
+            aside={<DocsOverviewAside />}
+            frameContent={false}
+            showPageIntro={false}
+          >
+            <DocsHome navigation={navigation} />
+          </DocsShell>
         </div>
-        <DocsShell
-          currentHref='/docs'
-          navigation={navigation}
-          title='Documentation'
-          description='Self-serve onboarding, rollout guidance, command reference, and operating principles for teams using Diffmint.'
-          aside={<DocsOverviewAside />}
-          frameContent={false}
-        >
-          <DocsHome navigation={navigation} />
-        </DocsShell>
       </main>
     );
   }
@@ -88,43 +82,30 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
   }
 
   const relatedDocs = getRelatedDocs(doc);
+  const { previous, next } = getAdjacentDocs(doc);
 
   return (
-    <main className='mx-auto min-h-screen max-w-7xl px-6 py-10'>
-      <div className='mb-8 flex items-center justify-between gap-4'>
-        <BrandLink priority size={40} />
-        <div className='flex items-center gap-2'>
-          <Button variant='ghost' asChild>
-            <Link href='/install'>Install</Link>
-          </Button>
-          <Button asChild>
-            <Link href='/auth/sign-in'>Sign In</Link>
-          </Button>
-        </div>
+    <main className='relative min-h-screen overflow-hidden'>
+      <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.1),transparent_30%),linear-gradient(180deg,var(--background),color-mix(in_oklab,var(--muted)_18%,transparent))]' />
+      <div className='absolute inset-0 bg-[linear-gradient(to_right,color-mix(in_oklab,var(--border)_42%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--border)_42%,transparent)_1px,transparent_1px)] bg-[size:40px_40px] opacity-25' />
+
+      <div className='relative mx-auto min-h-screen max-w-[1480px] px-4 py-4 sm:px-6 lg:px-8'>
+        <DocsPublicHeader navigation={navigation} />
+        <DocsShell
+          currentHref={doc.href}
+          navigation={navigation}
+          title={doc.title}
+          description={doc.description}
+          aside={<DocsRelatedRail relatedDocs={relatedDocs} variant='public' />}
+          footer={<DocsPager previous={previous} next={next} variant='public' />}
+          headingItems={doc.headings}
+          readingTimeMinutes={doc.readingTimeMinutes}
+          section={doc.section}
+          surfaces={doc.surfaces}
+        >
+          <DocMdx source={doc.body} />
+        </DocsShell>
       </div>
-      <DocsShell
-        currentHref={doc.href}
-        navigation={navigation}
-        title={doc.title}
-        description={doc.description}
-        aside={
-          <Card>
-            <CardHeader>
-              <CardTitle className='text-base'>Related docs</CardTitle>
-              <CardDescription>Continue the setup without losing context.</CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-2'>
-              {relatedDocs.map((item) => (
-                <Button key={item.href} variant='outline' asChild className='w-full justify-start'>
-                  <Link href={item.href}>{item.title}</Link>
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-        }
-      >
-        <DocMdx source={doc.body} />
-      </DocsShell>
     </main>
   );
 }

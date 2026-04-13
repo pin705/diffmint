@@ -12,6 +12,18 @@ related:
 
 # VS Code Guide
 
+## Quick Actions
+
+The activity bar now starts with a `Quick Actions` section so the most common flows stay one click
+away:
+
+- Sign In / Switch Workspace
+- Review Current Changes
+- Review Staged Changes
+- Open Review History
+- Run Doctor
+- Open Team Rules
+
 ## Core commands
 
 - Review Current Changes
@@ -23,13 +35,21 @@ related:
 - Open Team Rules
 - Sign In / Switch Workspace
 
-## Result experience
+## Result panels
 
-- Summary first
-- Findings grouped by file
-- Click through to source
-- Copy suggested fixes
-- Open the full report in the web app
+- Review results now open in a structured webview with `Overview`, `Review Context`, `Findings`,
+  and artifact sections instead of dumping raw terminal text.
+- History panels group each session by summary, severity, and scope so long local histories stay
+  scannable.
+- Doctor panels separate readiness checks from raw output so auth and control-plane issues are
+  easier to spot.
+
+## Workspace and history
+
+- `Review Results` keeps the latest grouped output visible from the sidebar.
+- `History` shows recent local or synced sessions using the same severity-first summary as the CLI.
+- `Workspace` keeps the active workspace, provider, policy version, and sync mode visible without
+  leaving the editor.
 
 ## Extension runtime
 

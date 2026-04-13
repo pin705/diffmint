@@ -54,6 +54,10 @@
         "title": "Diffmint: Open Review History"
       },
       {
+        "command": "diffmint.runDoctor",
+        "title": "Diffmint: Run Doctor"
+      },
+      {
         "command": "diffmint.openTeamRules",
         "title": "Diffmint: Open Team Rules"
       },
@@ -85,6 +89,10 @@
     },
     "views": {
       "diffmint": [
+        {
+          "id": "diffmint.actions",
+          "name": "Quick Actions"
+        },
         {
           "id": "diffmint.results",
           "name": "Review Results"
@@ -125,6 +133,11 @@
         }
       ],
       "view/title": [
+        {
+          "command": "diffmint.refreshViews",
+          "when": "view == diffmint.actions",
+          "group": "navigation"
+        },
         {
           "command": "diffmint.refreshViews",
           "when": "view == diffmint.results",
@@ -168,6 +181,7 @@
     "onCommand:diffmint.reviewCurrentChanges",
     "onCommand:diffmint.reviewSelectedFiles",
     "onCommand:diffmint.reviewStagedChanges",
+    "onCommand:diffmint.runDoctor",
     "onCommand:diffmint.showLatestResult",
     "onCommand:diffmint.signIn"
   ],

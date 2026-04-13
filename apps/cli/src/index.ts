@@ -12,11 +12,19 @@ import type {
 import {
   buildReviewRequest,
   createReviewSessionWithRuntime,
+  type DoctorCheck,
   renderMarkdownSession,
   renderTerminalSession,
   runDoctor
 } from '@diffmint/review-core';
 import { sanitizeReviewSessionForCloudSync } from '@diffmint/review-core';
+import {
+  renderCliHelp,
+  renderDoctorChecks,
+  renderExplainOutput,
+  renderHistorySessions,
+  renderSuggestedTests
+} from './presentation';
 
 interface LocalConfig {
   apiBaseUrl?: string;
@@ -72,14 +80,14 @@ function writeConfig(config: LocalConfig): void {
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + '\n', 'utf8');
 }
 
-function appendHistory(record: unknown): void {
+function appendHistory(record: ReviewSession): void {
   ensureHome();
   const prefix = existsSync(HISTORY_PATH) ? readFileSync(HISTORY_PATH, 'utf8') : '';
   const next = `${prefix}${JSON.stringify(record)}\n`;
   writeFileSync(HISTORY_PATH, next, 'utf8');
 }
 
-function readHistory(): unknown[] {
+function readHistory(): ReviewSession[] {
   ensureHome();
   if (!existsSync(HISTORY_PATH)) {
     return [];
@@ -89,7 +97,7 @@ function readHistory(): unknown[] {
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => JSON.parse(line));
+    .map((line) => JSON.parse(line) as ReviewSession);
 }
 
 function readSyncQueue(): SyncQueueEntry[] {
@@ -122,18 +130,7 @@ function appendSyncQueue(entries: SyncQueueEntry[]): number {
 }
 
 function printHelp(): void {
-  console.log(`Diffmint CLI
-
-Usage:
-  dm auth login
-  dm auth logout
-  dm config set-provider <provider>
-  dm review [--staged] [--base <ref>] [--files <a> <b>] [--json] [--markdown]
-  dm explain <file>
-  dm tests <file>
-  dm history
-  dm doctor
-`);
+  console.log(renderCliHelp());
 }
 
 function parseFlags(args: string[]) {
@@ -192,6 +189,10 @@ function output(data: string | object, asJson: boolean): void {
   }
 
   console.log(typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+}
+
+function hasFlag(args: string[], flag: string): boolean {
+  return args.includes(flag);
 }
 
 function getApiBaseUrl(config: LocalConfig): string {
@@ -539,14 +540,14 @@ async function syncReviewToCloud(
   };
 }
 
-async function loadHistory(config: LocalConfig): Promise<unknown[]> {
+async function loadHistory(config: LocalConfig): Promise<ReviewSession[]> {
   if (!config.workspace) {
     return readHistory();
   }
 
   try {
     await flushSyncQueue(config);
-    const payload = await fetchApi<{ items: unknown[] }>(
+    const payload = await fetchApi<{ items: ReviewSession[] }>(
       getApiBaseUrl(config),
       '/api/client/history',
       undefined,
@@ -558,10 +559,10 @@ async function loadHistory(config: LocalConfig): Promise<unknown[]> {
   }
 }
 
-async function extendDoctorOutput(config: LocalConfig): Promise<unknown[]> {
+async function extendDoctorOutput(config: LocalConfig): Promise<DoctorCheck[]> {
   const checks = runDoctor(process.cwd());
   const queueSize = getSyncQueueSize();
-  const extendedChecks = [
+  const extendedChecks: DoctorCheck[] = [
     ...checks,
     {
       id: 'config',
@@ -593,57 +594,27 @@ async function extendDoctorOutput(config: LocalConfig): Promise<unknown[]> {
       undefined,
       config
     );
+    const controlPlaneCheck: DoctorCheck = {
+      id: 'control-plane',
+      label: 'Control plane',
+      status: 'ok',
+      detail: `Connected to ${bootstrap.workspace.name} via ${config.apiBaseUrl}`
+    };
 
-    return [
-      ...extendedChecks,
-      {
-        id: 'control-plane',
-        label: 'Control plane',
-        status: 'ok',
-        detail: `Connected to ${bootstrap.workspace.name} via ${config.apiBaseUrl}`
-      }
-    ];
+    return [...extendedChecks, controlPlaneCheck];
   } catch (error) {
-    return [
-      ...extendedChecks,
-      {
-        id: 'control-plane',
-        label: 'Control plane',
-        status: 'warn',
-        detail:
-          error instanceof Error
-            ? `Configured but unreachable: ${error.message}`
-            : 'Configured but unreachable.'
-      }
-    ];
+    const controlPlaneCheck: DoctorCheck = {
+      id: 'control-plane',
+      label: 'Control plane',
+      status: 'warn',
+      detail:
+        error instanceof Error
+          ? `Configured but unreachable: ${error.message}`
+          : 'Configured but unreachable.'
+    };
+
+    return [...extendedChecks, controlPlaneCheck];
   }
-}
-
-function explainFile(target: string): string {
-  const absolute = path.resolve(process.cwd(), target);
-  const source = readFileSync(absolute, 'utf8');
-  const exportCount = [...source.matchAll(/^export\s/gm)].length;
-  const lineCount = source.split('\n').length;
-  const isClient = source.includes("'use client'") || source.includes('"use client"');
-
-  return [
-    `Explain: ${target}`,
-    `- Lines: ${lineCount}`,
-    `- Exports: ${exportCount}`,
-    `- Runtime: ${isClient ? 'client component or browser-aware module' : 'server or shared module'}`,
-    `- Suggested next step: run \`dm tests ${target}\` if this file changes behavior or contracts.`
-  ].join('\n');
-}
-
-function generateTests(target: string): string {
-  const name = path.basename(target);
-  return [
-    `Suggested tests for ${name}`,
-    `1. Covers the primary happy path for ${name}.`,
-    `2. Validates error handling and empty-state behavior.`,
-    `3. Verifies policy or auth boundaries if the file touches control-plane logic.`,
-    `4. Confirms trace IDs or sync metadata are preserved when applicable.`
-  ].join('\n');
 }
 
 async function main() {
@@ -798,12 +769,24 @@ async function main() {
   }
 
   if (command === 'history') {
-    output(await loadHistory(readConfig()), false);
+    const history = await loadHistory(readConfig());
+    const useJson = hasFlag([subcommand, ...rest].filter(Boolean), '--json');
+    if (useJson) {
+      output(history, true);
+    } else {
+      console.log(renderHistorySessions(history));
+    }
     return;
   }
 
   if (command === 'doctor') {
-    output(await extendDoctorOutput(readConfig()), false);
+    const checks = await extendDoctorOutput(readConfig());
+    if (hasFlag([subcommand, ...rest].filter(Boolean), '--json')) {
+      output(checks, true);
+      return;
+    }
+
+    console.log(renderDoctorChecks(checks));
     return;
   }
 
@@ -812,7 +795,9 @@ async function main() {
     if (!target) {
       throw new Error('Expected a file path.');
     }
-    console.log(explainFile(target));
+    const absolute = path.resolve(process.cwd(), target);
+    const source = readFileSync(absolute, 'utf8');
+    console.log(renderExplainOutput(target, source));
     return;
   }
 
@@ -821,7 +806,7 @@ async function main() {
     if (!target) {
       throw new Error('Expected a file path.');
     }
-    console.log(generateTests(target));
+    console.log(renderSuggestedTests(target));
     return;
   }
 

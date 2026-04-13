@@ -92,13 +92,16 @@ describe('diffmint cli', () => {
     expect(runCli(['config', 'set-provider', 'qwen-enterprise'], repoDir, homeDir).status).toBe(0);
 
     const reviewResult = runCli(['review', '--files', filePath, '--markdown'], repoDir, homeDir);
-    const historyResult = runCli(['history'], repoDir, homeDir);
-    const history = JSON.parse(historyResult.stdout) as Array<{ provider: string }>;
+    const historyTextResult = runCli(['history'], repoDir, homeDir);
+    const historyJsonResult = runCli(['history', '--json'], repoDir, homeDir);
+    const history = JSON.parse(historyJsonResult.stdout) as Array<{ provider: string }>;
 
     expect(reviewResult.status).toBe(0);
     expect(reviewResult.stdout).toContain('# Diffmint Review');
     expect(reviewResult.stdout).toContain('`qwen-enterprise`');
     expect(reviewResult.stdout).toContain('Sensitive control-plane surface changed');
+    expect(historyTextResult.status).toBe(0);
+    expect(historyTextResult.stdout).toContain('Diffmint History');
     expect(history).toHaveLength(1);
     expect(history[0]?.provider).toBe('qwen-enterprise');
   }, 15_000);

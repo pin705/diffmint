@@ -1,0 +1,19 @@
+---
+title: CLI and VS Code context panels
+description: Diffmint now groups long review context into compact terminal and VS Code sections, with richer history and doctor UX.
+section: Changelog
+order: 150
+surfaces:
+  - cli
+  - vscode
+related:
+  - /docs/cli/reference
+  - /docs/vscode/guide
+---
+
+# CLI and VS Code context panels
+
+- CLI review output now follows a compact section model: overview, grouped context, severity summary, findings, and next steps.
+- `dm history` and `dm doctor` now default to human-readable terminal summaries, with `--json` reserved for automation and editor integrations.
+- The VS Code extension now uses richer result panels for review, history, doctor, and sign-in flows instead of generic raw output views.
+- A new `Quick Actions` section keeps sign-in, review, history, doctor, and team-rules entry points grouped in the activity bar.

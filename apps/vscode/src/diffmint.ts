@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import type { ReviewContextSummary } from './types';
 
 export interface DiffmintLocalWorkspace {
   id: string;
@@ -24,11 +25,22 @@ export interface DiffmintLocalConfig {
 }
 
 export interface DiffmintHistoryEntry {
+  id?: string;
   traceId?: string;
   summary?: string;
   status?: string;
   commandSource?: string;
   source?: string;
+  provider?: string;
+  model?: string;
+  policyVersionId?: string;
+  severityCounts?: {
+    critical?: number;
+    high?: number;
+    medium?: number;
+    low?: number;
+  };
+  context?: ReviewContextSummary;
   startedAt?: string;
   completedAt?: string;
 }
@@ -85,6 +97,14 @@ export function renderResultHtml(title: string, body: string): string {
     <pre style="white-space: pre-wrap;">${escapeHtml(body)}</pre>
   </body>
 </html>`;
+}
+
+export function tryParseJson<T>(value: string): T | null {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
 }
 
 export function readDiffmintConfig(configPath: string): DiffmintLocalConfig | null {

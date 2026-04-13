@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  getAdjacentDocs,
   clearDocsCache,
   getAllDocs,
   getDocBySlug,
@@ -19,6 +20,8 @@ describe('docs content', () => {
     expect(docs.length).toBeGreaterThanOrEqual(17);
     expect(doc?.slug).toBe('getting-started/5-minute-quickstart');
     expect(doc?.internalLinks).toContain('/docs/getting-started/install-cli');
+    expect(doc?.readingTimeMinutes).toBeGreaterThanOrEqual(1);
+    expect(doc?.headings.some((heading) => heading.level === 2)).toBe(true);
   });
 
   it('builds navigation in the published IA order', () => {
@@ -41,5 +44,16 @@ describe('docs content', () => {
 
     expect(relatedSlugs).toContain('getting-started/install-cli');
     expect(relatedSlugs).toContain('troubleshooting/auth-and-doctor');
+  });
+
+  it('finds adjacent docs in canonical order', () => {
+    const doc = getDocBySlug(['getting-started', 'install-cli']);
+
+    expect(doc).toBeDefined();
+
+    const { previous, next } = getAdjacentDocs(doc!);
+
+    expect(previous?.slug).toBe('getting-started/docker-development');
+    expect(next?.slug).toBe('getting-started/install-vscode-extension');
   });
 });

@@ -9,7 +9,8 @@ import {
   normalizeWebBaseUrl,
   readDiffmintConfig,
   readDiffmintHistory,
-  renderResultHtml
+  renderResultHtml,
+  tryParseJson
 } from '../../apps/vscode/src/diffmint.ts';
 
 const tempDirs: string[] = [];
@@ -87,5 +88,10 @@ describe('vscode extension helpers', () => {
     const html = renderResultHtml('Title <unsafe>', 'Body & details');
     expect(html).toContain('&lt;unsafe&gt;');
     expect(html).toContain('Body &amp; details');
+  });
+
+  it('parses valid json payloads and ignores invalid ones', () => {
+    expect(tryParseJson<{ ok: boolean }>('{"ok":true}')).toEqual({ ok: true });
+    expect(tryParseJson('{not-json}')).toBeNull();
   });
 });

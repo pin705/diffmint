@@ -73,6 +73,8 @@ describe('review core', () => {
     expect(request.mode).toBe('security');
     expect(request.diff).toContain(`b/${filePath}`);
     expect(request.metadata.gitBranch).toBeDefined();
+    expect(request.metadata.context?.fileSummary).toContain(filePath);
+    expect(request.metadata.context?.fileGroups).toEqual([{ label: 'src', count: 1 }]);
   });
 
   it('creates governance-aware findings and markdown output', () => {
@@ -90,6 +92,8 @@ describe('review core', () => {
     expect(session.severityCounts.high).toBe(1);
     expect(session.severityCounts.medium).toBeGreaterThanOrEqual(1);
     expect(markdown).toContain('# Diffmint Review');
+    expect(markdown).toContain('## Context');
+    expect(markdown).toContain('File groups: src (1)');
     expect(markdown).toContain('Sensitive control-plane surface changed');
   });
 

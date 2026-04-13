@@ -94,6 +94,29 @@ export interface WorkspaceBootstrap {
   releaseChannels: ReleaseChannelName[];
 }
 
+export interface ReviewContextGroup {
+  label: string;
+  count: number;
+}
+
+export interface ReviewDiffStats {
+  fileCount: number;
+  additions: number;
+  deletions: number;
+}
+
+export interface ReviewContextSummary {
+  sourceLabel: string;
+  modeLabel: string;
+  branch?: string;
+  promptProfile?: string;
+  fileSummary: string;
+  visibleFiles: string[];
+  remainingFileCount: number;
+  fileGroups: ReviewContextGroup[];
+  diffStats: ReviewDiffStats;
+}
+
 export interface ReviewRequest {
   id: string;
   traceId: string;
@@ -114,6 +137,7 @@ export interface ReviewRequest {
     gitBranch?: string;
     provider?: string;
     model?: string;
+    context?: ReviewContextSummary;
   };
   createdAt: string;
 }
@@ -150,6 +174,7 @@ export interface ReviewSession {
   policyVersionId?: string;
   status: ReviewSessionStatus;
   findings: Finding[];
+  context?: ReviewContextSummary;
   summary: string;
   severityCounts: Record<FindingSeverity, number>;
   durationMs: number;

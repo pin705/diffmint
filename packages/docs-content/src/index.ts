@@ -86,6 +86,12 @@ export const docFrontmatterSchema = z.object({
 
 export type DocFrontmatter = z.infer<typeof docFrontmatterSchema>;
 
+export interface DocHeading {
+  id: string;
+  level: 2 | 3 | 4;
+  text: string;
+}
+
 export interface DocPage extends DocFrontmatter {
   slug: string;
   slugSegments: string[];
@@ -93,6 +99,9 @@ export interface DocPage extends DocFrontmatter {
   filePath: string;
   body: string;
   internalLinks: string[];
+  headings: DocHeading[];
+  readingTimeMinutes: number;
+  wordCount: number;
 }
 
 export interface DocsNavGroup {
@@ -102,6 +111,17 @@ export interface DocsNavGroup {
 
 const CONTENT_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'content');
 let cache: DocPage[] | null = null;
+
+export function slugifyDocHeading(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[`*_~()[\]{}<>]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
 
 function walk(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -120,6 +140,68 @@ function walk(dir: string): string[] {
   }
 
   return files;
+}
+
+function stripCodeFences(body: string): string {
+  return body.replace(/```[\s\S]*?```/g, '');
+}
+
+function stripMarkdownSyntax(body: string): string {
+  return stripCodeFences(body)
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^>+\s?/gm, '')
+    .replace(/[*_#>-]/g, ' ')
+    .replace(/\|/g, ' ');
+}
+
+function createUniqueHeadingId(headingText: string, counts: Map<string, number>): string | null {
+  const baseId = slugifyDocHeading(headingText);
+
+  if (!baseId) {
+    return null;
+  }
+
+  const nextCount = (counts.get(baseId) ?? 0) + 1;
+  counts.set(baseId, nextCount);
+
+  return nextCount === 1 ? baseId : `${baseId}-${nextCount}`;
+}
+
+function extractHeadings(body: string): DocHeading[] {
+  const headingCounts = new Map<string, number>();
+  const matches = stripCodeFences(body).matchAll(/^(#{2,4})\s+(.+)$/gm);
+
+  return [...matches]
+    .map((match) => {
+      const rawText = match[2]
+        ?.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/[`*_~]/g, '')
+        .trim();
+
+      if (!rawText) {
+        return null;
+      }
+
+      const id = createUniqueHeadingId(rawText, headingCounts);
+
+      if (!id) {
+        return null;
+      }
+
+      return {
+        id,
+        level: match[1].length as 2 | 3 | 4,
+        text: rawText
+      };
+    })
+    .filter((heading): heading is DocHeading => Boolean(heading));
+}
+
+function countWords(body: string): number {
+  const sanitized = stripMarkdownSyntax(body);
+  return sanitized.split(/\s+/).filter(Boolean).length;
 }
 
 function extractInternalLinks(body: string): string[] {
@@ -145,6 +227,8 @@ function parseDoc(filePath: string): DocPage {
   const relativePath = path.relative(CONTENT_ROOT, filePath);
   const slug = relativePath.replace(/\.mdx$/, '').replaceAll(path.sep, '/');
   const slugSegments = slug.split('/');
+  const body = stripLeadingTitleHeading(parsed.content, frontmatter.title);
+  const wordCount = countWords(body);
 
   return {
     ...frontmatter,
@@ -152,8 +236,11 @@ function parseDoc(filePath: string): DocPage {
     slugSegments,
     href: `/docs/${slug}`,
     filePath,
-    body: stripLeadingTitleHeading(parsed.content, frontmatter.title),
-    internalLinks: extractInternalLinks(parsed.content)
+    body,
+    internalLinks: extractInternalLinks(parsed.content),
+    headings: extractHeadings(body),
+    readingTimeMinutes: Math.max(1, Math.ceil(wordCount / 220)),
+    wordCount
   };
 }
 
@@ -212,4 +299,27 @@ export function getRelatedDocs(doc: DocPage): DocPage[] {
   return doc.related
     .map((href) => allDocs.find((item) => item.href === href))
     .filter((item): item is DocPage => Boolean(item));
+}
+
+export function getAdjacentDocs(doc: DocPage): {
+  next: DocPage | null;
+  previous: DocPage | null;
+} {
+  const docs =
+    doc.section === 'Changelog'
+      ? getAllDocs()
+      : getAllDocs().filter((item) => item.section !== 'Changelog');
+  const currentIndex = docs.findIndex((item) => item.slug === doc.slug);
+
+  if (currentIndex === -1) {
+    return {
+      previous: null,
+      next: null
+    };
+  }
+
+  return {
+    previous: docs[currentIndex - 1] ?? null,
+    next: docs[currentIndex + 1] ?? null
+  };
 }

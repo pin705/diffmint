@@ -3,12 +3,22 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import {
   buildWebUrl,
+  type DiffmintHistoryEntry,
   getDiffmintPaths,
   normalizeWebBaseUrl,
   readDiffmintConfig,
   readDiffmintHistory,
-  renderResultHtml
+  renderResultHtml,
+  tryParseJson
 } from './diffmint';
+import {
+  renderDoctorChecksHtml,
+  renderHistoryHtml,
+  renderPlainTextHtml,
+  renderReviewSessionHtml,
+  renderWorkspaceSummaryHtml
+} from './render';
+import type { DoctorCheckView, ReviewSessionView } from './types';
 
 const execFileAsync = promisify(execFile);
 
@@ -16,6 +26,12 @@ interface LatestResult {
   title: string;
   body: string;
   updatedAt: string;
+  html?: string;
+}
+
+interface RenderedResult {
+  body: string;
+  html?: string;
 }
 
 class DiffmintTreeProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
@@ -81,17 +97,26 @@ function createItem(
   return item;
 }
 
-function showResultsPanel(title: string, body: string): void {
+function showResultsPanel(result: LatestResult): void {
   const panel = vscode.window.createWebviewPanel(
     'diffmint-results',
-    title,
+    result.title,
     vscode.ViewColumn.Beside,
     {
       enableFindWidget: true
     }
   );
 
-  panel.webview.html = renderResultHtml(title, body);
+  panel.webview.html = result.html ?? renderResultHtml(result.title, result.body);
+}
+
+function truncateText(value: string, maxLength = 84): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength - 1)}…`;
 }
 
 function updateStatusBar(item: vscode.StatusBarItem): void {
@@ -109,13 +134,85 @@ function updateStatusBar(item: vscode.StatusBarItem): void {
   item.command = 'diffmint.openDashboard';
 }
 
+function renderReviewResult(raw: string): RenderedResult {
+  const session = tryParseJson<ReviewSessionView>(raw);
+
+  if (!session) {
+    return {
+      body: raw || 'No output returned from Diffmint.',
+      html: renderPlainTextHtml(
+        'Diffmint Review',
+        raw || 'No output returned from Diffmint.',
+        'The review result could not be parsed as structured JSON, so the raw CLI output is shown.'
+      )
+    };
+  }
+
+  return {
+    body: session.summary,
+    html: renderReviewSessionHtml(session)
+  };
+}
+
+function renderHistoryResult(raw: string): RenderedResult {
+  const history = tryParseJson<DiffmintHistoryEntry[]>(raw);
+
+  if (!history) {
+    return {
+      body: raw || 'No output returned from Diffmint.',
+      html: renderPlainTextHtml(
+        'Diffmint History',
+        raw || 'No output returned from Diffmint.',
+        'The history payload could not be parsed, so the raw CLI output is shown.'
+      )
+    };
+  }
+
+  return {
+    body: `${history.length} review session(s)`,
+    html: renderHistoryHtml(history)
+  };
+}
+
+function renderDoctorResult(raw: string): RenderedResult {
+  const checks = tryParseJson<DoctorCheckView[]>(raw);
+
+  if (!checks) {
+    return {
+      body: raw || 'No output returned from Diffmint.',
+      html: renderPlainTextHtml(
+        'Diffmint Doctor',
+        raw || 'No output returned from Diffmint.',
+        'The doctor payload could not be parsed, so the raw CLI output is shown.'
+      )
+    };
+  }
+
+  return {
+    body: `${checks.length} runtime check(s)`,
+    html: renderDoctorChecksHtml(checks)
+  };
+}
+
+function renderSignInResult(raw: string): RenderedResult {
+  const config = readDiffmintConfig(getDiffmintPaths().configPath);
+
+  return {
+    body: config?.workspace ? `Signed in to ${config.workspace.name}` : raw,
+    html: renderWorkspaceSummaryHtml(config, raw || 'No output returned from Diffmint.')
+  };
+}
+
 async function runAndShow(
   title: string,
   args: string[],
   latestResultRef: { current: LatestResult | null },
   providers: DiffmintTreeProvider[],
   statusBar: vscode.StatusBarItem,
-  options: { requireWorkspace?: boolean } = {}
+  options: {
+    requireWorkspace?: boolean;
+    render?: (raw: string) => RenderedResult;
+  } = {}
 ) {
   if (options.requireWorkspace && !getWorkspaceFolder()) {
     void vscode.window.showWarningMessage('Open a workspace folder before running this command.');
@@ -132,14 +229,21 @@ async function runAndShow(
       async () => runCli(args)
     );
 
+    const rendered = options.render
+      ? options.render(result)
+      : {
+          body: result || 'No output returned from Diffmint.'
+        };
+
     latestResultRef.current = {
       title,
-      body: result || 'No output returned from Diffmint.',
+      body: rendered.body || 'No output returned from Diffmint.',
+      html: rendered.html,
       updatedAt: new Date().toISOString()
     };
     providers.forEach((provider) => provider.refresh());
     updateStatusBar(statusBar);
-    showResultsPanel(title, result || 'No output returned from Diffmint.');
+    showResultsPanel(latestResultRef.current);
   } catch (error) {
     const nodeError = error as NodeJS.ErrnoException;
     const message = error instanceof Error ? error.message : String(error);
@@ -180,7 +284,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     return [
       createItem(latestResultRef.current.title, {
-        description: new Date(latestResultRef.current.updatedAt).toLocaleString(),
+        description: truncateText(latestResultRef.current.body),
         command: {
           command: 'diffmint.showLatestResult',
           title: 'Show Latest Result'
@@ -204,8 +308,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     return history.map((entry) =>
       createItem(entry.traceId ?? 'Review session', {
-        description:
-          entry.summary ?? `${entry.commandSource ?? 'cli'} · ${entry.status ?? 'unknown'}`,
+        description: entry.severityCounts
+          ? `H${entry.severityCounts.high ?? 0} M${entry.severityCounts.medium ?? 0} · ${truncateText(
+              entry.summary ?? `${entry.commandSource ?? 'cli'} · ${entry.status ?? 'unknown'}`
+            )}`
+          : (entry.summary ?? `${entry.commandSource ?? 'cli'} · ${entry.status ?? 'unknown'}`),
         tooltip: entry.summary ?? entry.traceId,
         command: {
           command: 'diffmint.openHistory',
@@ -215,6 +322,57 @@ export function activate(context: vscode.ExtensionContext) {
       })
     );
   });
+
+  const actionsProvider = new DiffmintTreeProvider(() => [
+    createItem('Sign In / Switch Workspace', {
+      description: 'Connect the local CLI to the configured control plane',
+      command: {
+        command: 'diffmint.signIn',
+        title: 'Sign In / Switch Workspace'
+      },
+      iconPath: new vscode.ThemeIcon('plug')
+    }),
+    createItem('Review Current Changes', {
+      description: 'Run the default Diffmint review for the current working tree',
+      command: {
+        command: 'diffmint.reviewCurrentChanges',
+        title: 'Review Current Changes'
+      },
+      iconPath: new vscode.ThemeIcon('sparkle')
+    }),
+    createItem('Review Staged Changes', {
+      description: 'Limit the review to staged files',
+      command: {
+        command: 'diffmint.reviewStagedChanges',
+        title: 'Review Staged Changes'
+      },
+      iconPath: new vscode.ThemeIcon('git-commit')
+    }),
+    createItem('Open Review History', {
+      description: 'Inspect the grouped local and synced session list',
+      command: {
+        command: 'diffmint.openHistory',
+        title: 'Open Review History'
+      },
+      iconPath: new vscode.ThemeIcon('history')
+    }),
+    createItem('Run Doctor', {
+      description: 'Check runtime, auth, and control-plane readiness',
+      command: {
+        command: 'diffmint.runDoctor',
+        title: 'Run Doctor'
+      },
+      iconPath: new vscode.ThemeIcon('beaker')
+    }),
+    createItem('Open Team Rules', {
+      description: 'Jump to policy configuration in the control plane',
+      command: {
+        command: 'diffmint.openTeamRules',
+        title: 'Open Team Rules'
+      },
+      iconPath: new vscode.ThemeIcon('shield')
+    })
+  ]);
 
   const workspaceProvider = new DiffmintTreeProvider(() => {
     const config = readDiffmintConfig(getDiffmintPaths().configPath);
@@ -258,7 +416,7 @@ export function activate(context: vscode.ExtensionContext) {
     ];
   });
 
-  const providers = [resultsProvider, historyProvider, workspaceProvider];
+  const providers = [resultsProvider, historyProvider, workspaceProvider, actionsProvider];
   updateStatusBar(statusBar);
 
   context.subscriptions.push(
@@ -266,6 +424,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.registerTreeDataProvider('diffmint.results', resultsProvider),
     vscode.window.registerTreeDataProvider('diffmint.history', historyProvider),
     vscode.window.registerTreeDataProvider('diffmint.workspace', workspaceProvider),
+    vscode.window.registerTreeDataProvider('diffmint.actions', actionsProvider),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('diffmint')) {
         providers.forEach((provider) => provider.refresh());
@@ -276,18 +435,29 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('diffmint.reviewCurrentChanges', async () => {
-      await runAndShow('Diffmint Review', ['review'], latestResultRef, providers, statusBar, {
-        requireWorkspace: true
-      });
+      await runAndShow(
+        'Diffmint Review',
+        ['review', '--json'],
+        latestResultRef,
+        providers,
+        statusBar,
+        {
+          requireWorkspace: true,
+          render: renderReviewResult
+        }
+      );
     }),
     vscode.commands.registerCommand('diffmint.reviewStagedChanges', async () => {
       await runAndShow(
         'Diffmint Review (Staged)',
-        ['review', '--staged'],
+        ['review', '--staged', '--json'],
         latestResultRef,
         providers,
         statusBar,
-        { requireWorkspace: true }
+        {
+          requireWorkspace: true,
+          render: renderReviewResult
+        }
       );
     }),
     vscode.commands.registerCommand('diffmint.reviewSelectedFiles', async (uri?: vscode.Uri) => {
@@ -302,11 +472,14 @@ export function activate(context: vscode.ExtensionContext) {
       }
       await runAndShow(
         'Diffmint Review (Selected Files)',
-        ['review', '--files', ...targets],
+        ['review', '--files', ...targets, '--json'],
         latestResultRef,
         providers,
         statusBar,
-        { requireWorkspace: true }
+        {
+          requireWorkspace: true,
+          render: renderReviewResult
+        }
       );
     }),
     vscode.commands.registerCommand('diffmint.explainCurrentFile', async () => {
@@ -322,7 +495,15 @@ export function activate(context: vscode.ExtensionContext) {
         providers,
         statusBar,
         {
-          requireWorkspace: true
+          requireWorkspace: true,
+          render: (raw) => ({
+            body: raw || 'No output returned from Diffmint.',
+            html: renderPlainTextHtml(
+              'Diffmint Explain',
+              raw || 'No output returned from Diffmint.',
+              'The local CLI analyzed the current file and grouped the explanation into terminal-friendly sections.'
+            )
+          })
         }
       );
     }),
@@ -339,12 +520,41 @@ export function activate(context: vscode.ExtensionContext) {
         providers,
         statusBar,
         {
-          requireWorkspace: true
+          requireWorkspace: true,
+          render: (raw) => ({
+            body: raw || 'No output returned from Diffmint.',
+            html: renderPlainTextHtml(
+              'Diffmint Tests',
+              raw || 'No output returned from Diffmint.',
+              'The local CLI produced a grouped test plan for the current file.'
+            )
+          })
+        }
+      );
+    }),
+    vscode.commands.registerCommand('diffmint.runDoctor', async () => {
+      await runAndShow(
+        'Diffmint Doctor',
+        ['doctor', '--json'],
+        latestResultRef,
+        providers,
+        statusBar,
+        {
+          render: renderDoctorResult
         }
       );
     }),
     vscode.commands.registerCommand('diffmint.openHistory', async () => {
-      await runAndShow('Diffmint History', ['history'], latestResultRef, providers, statusBar);
+      await runAndShow(
+        'Diffmint History',
+        ['history', '--json'],
+        latestResultRef,
+        providers,
+        statusBar,
+        {
+          render: renderHistoryResult
+        }
+      );
     }),
     vscode.commands.registerCommand('diffmint.openTeamRules', async () => {
       await vscode.env.openExternal(
@@ -357,7 +567,10 @@ export function activate(context: vscode.ExtensionContext) {
         ['auth', 'login'],
         latestResultRef,
         providers,
-        statusBar
+        statusBar,
+        {
+          render: renderSignInResult
+        }
       );
     }),
     vscode.commands.registerCommand('diffmint.openDashboard', async () => {
@@ -375,7 +588,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      showResultsPanel(latestResultRef.current.title, latestResultRef.current.body);
+      showResultsPanel(latestResultRef.current);
     })
   );
 }

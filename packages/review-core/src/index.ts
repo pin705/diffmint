@@ -1,6 +1,5 @@
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { basename } from 'node:path';
 import type {
   Finding,
   FindingSeverity,
@@ -12,6 +11,10 @@ import type {
   ReviewSourceType
 } from '@diffmint/contracts';
 import { buildPolicyPrompt } from '@diffmint/policy-engine';
+import { buildHeadlessReviewPrompt, buildReviewContextSummary } from './context';
+import { renderMarkdownSession, renderTerminalSession } from './render';
+
+export { renderMarkdownSession, renderTerminalSession } from './render';
 
 export interface BuildReviewRequestOptions {
   cwd: string;
@@ -187,8 +190,8 @@ export function buildReviewRequest(options: BuildReviewRequestOptions): ReviewRe
   const diff = collectGitDiff(options);
   const files =
     options.files && options.files.length > 0 ? options.files : detectChangedFiles(diff);
-
-  return {
+  const promptProfile = 'diffmint-codex-compact-v1';
+  const baseRequest = {
     id: randomUUID(),
     traceId: createTraceId(),
     source: options.source,
@@ -198,6 +201,7 @@ export function buildReviewRequest(options: BuildReviewRequestOptions): ReviewRe
     baseRef: options.baseRef,
     files,
     diff,
+    promptProfile,
     policyVersionId: options.policy?.policyVersionId,
     localOnly: options.localOnly ?? false,
     cloudSyncEnabled: options.cloudSyncEnabled ?? true,
@@ -208,6 +212,14 @@ export function buildReviewRequest(options: BuildReviewRequestOptions): ReviewRe
       model: options.model
     },
     createdAt: new Date().toISOString()
+  } satisfies ReviewRequest;
+
+  return {
+    ...baseRequest,
+    metadata: {
+      ...baseRequest.metadata,
+      context: buildReviewContextSummary(baseRequest)
+    }
   };
 }
 
@@ -262,27 +274,6 @@ function shouldUseQwenRuntime(cwd: string): boolean {
   }
 
   return Boolean(findQwenBinary(cwd) && hasHeadlessAuthConfig());
-}
-
-function buildHeadlessReviewPrompt(request: ReviewRequest, policy?: PolicyBundle): string {
-  const instructions = [
-    'You are Diffmint, a policy-driven code review runtime.',
-    'Review the git diff provided on stdin.',
-    'Focus on concrete bugs, security issues, regressions, missing tests, and policy violations.',
-    'Do not suggest style-only nits unless they create risk.',
-    'Return valid JSON only with this shape:',
-    '{"summary":"string","findings":[{"severity":"low|medium|high|critical","title":"string","summary":"string","filePath":"optional string","suggestedAction":"optional string"}]}',
-    `Review mode: ${request.mode}.`,
-    `Review source: ${request.source}.`,
-    `Files in scope: ${request.files.length > 0 ? request.files.join(', ') : 'auto-detected from diff'}.`
-  ];
-
-  if (policy) {
-    instructions.push(`Active policy version: ${policy.policyVersionId}.`);
-    instructions.push(`Policy summary: ${policy.summary}`);
-  }
-
-  return instructions.join('\n');
 }
 
 function extractAssistantTextFromQwenPayload(payload: unknown): string | null {
@@ -536,6 +527,7 @@ export function createReviewSession(request: ReviewRequest): ReviewSession {
   const findings = createFindingsFromRequest(request);
   const startedAt = new Date().toISOString();
   const completedAt = new Date().toISOString();
+  const context = request.metadata.context ?? buildReviewContextSummary(request);
 
   return {
     id: randomUUID(),
@@ -548,10 +540,11 @@ export function createReviewSession(request: ReviewRequest): ReviewSession {
     policyVersionId: request.policyVersionId,
     status: 'completed',
     findings,
+    context,
     summary:
       findings.length === 0
         ? 'No obvious issues detected in the selected review scope.'
-        : `Generated ${findings.length} review findings for ${filesLabel(request.files)}.`,
+        : `Generated ${findings.length} review findings for ${context.fileSummary.toLowerCase()}.`,
     severityCounts: {
       low: countSeverity(findings, 'low'),
       medium: countSeverity(findings, 'medium'),
@@ -592,6 +585,7 @@ export async function createReviewSessionWithRuntime(
   const findings = runtimeResult.findings;
   const startedAt = new Date().toISOString();
   const completedAt = new Date().toISOString();
+  const context = request.metadata.context ?? buildReviewContextSummary(request);
 
   return {
     id: randomUUID(),
@@ -604,6 +598,7 @@ export async function createReviewSessionWithRuntime(
     policyVersionId: request.policyVersionId,
     status: 'completed',
     findings,
+    context,
     summary: runtimeResult.summary,
     severityCounts: {
       low: countSeverity(findings, 'low'),
@@ -663,50 +658,6 @@ export function sanitizeReviewSessionForCloudSync(
       sanitizeArtifactForCloudSync(artifact, normalizedOptions)
     )
   };
-}
-
-function filesLabel(files: string[]): string {
-  if (files.length === 0) {
-    return 'the current diff';
-  }
-
-  if (files.length === 1) {
-    return basename(files[0]);
-  }
-
-  return `${files.length} files`;
-}
-
-export function renderTerminalSession(request: ReviewRequest, findings: Finding[]): string {
-  const lines = [
-    `Diffmint review`,
-    `Trace ID: ${request.traceId}`,
-    `Scope: ${request.source.replaceAll('_', ' ')}`,
-    `Mode: ${request.mode}`,
-    `Files: ${request.files.length > 0 ? request.files.join(', ') : '(auto-detected from diff)'}`,
-    ''
-  ];
-
-  if (findings.length === 0) {
-    lines.push('No actionable findings detected.');
-  } else {
-    lines.push('Findings:');
-    for (const finding of findings) {
-      lines.push(`- [${finding.severity}] ${finding.title}: ${finding.summary}`);
-    }
-  }
-
-  return lines.join('\n');
-}
-
-export function renderMarkdownSession(session: ReviewSession): string {
-  const findings = session.findings
-    .map(
-      (finding) => `- **${finding.severity.toUpperCase()}** ${finding.title}: ${finding.summary}`
-    )
-    .join('\n');
-
-  return `# Diffmint Review\n\n- Trace ID: \`${session.traceId}\`\n- Status: \`${session.status}\`\n- Provider: \`${session.provider}\`\n- Model: \`${session.model}\`\n\n## Findings\n${findings || '- No findings'}\n`;
 }
 
 export function runDoctor(cwd: string): DoctorCheck[] {

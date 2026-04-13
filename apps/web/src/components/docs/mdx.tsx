@@ -1,79 +1,181 @@
 import Link from 'next/link';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import remarkGfm from 'remark-gfm';
-import type { HTMLAttributes, ReactNode } from 'react';
+import { Children, isValidElement, type HTMLAttributes, type ReactNode } from 'react';
+import { Icons } from '@/components/icons';
+import { cn } from '@/lib/utils';
+import { slugifyDocHeading } from '@diffmint/docs-content';
+
+function getPlainText(children: ReactNode): string {
+  return Children.toArray(children)
+    .map((child) => {
+      if (typeof child === 'string' || typeof child === 'number') {
+        return String(child);
+      }
+
+      if (isValidElement<{ children?: ReactNode }>(child)) {
+        return getPlainText(child.props.children);
+      }
+
+      return '';
+    })
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function createHeadingIdGetter() {
+  const counts = new Map<string, number>();
+
+  return (children: ReactNode): string | undefined => {
+    const text = getPlainText(children);
+    const baseId = slugifyDocHeading(text);
+
+    if (!baseId) {
+      return undefined;
+    }
+
+    const nextCount = (counts.get(baseId) ?? 0) + 1;
+    counts.set(baseId, nextCount);
+
+    return nextCount === 1 ? baseId : `${baseId}-${nextCount}`;
+  };
+}
 
 function MdxLink({ href = '', children }: { href?: string; children?: ReactNode }) {
+  const className =
+    'text-foreground underline decoration-border underline-offset-[6px] transition-colors hover:text-primary';
+
   if (href.startsWith('/')) {
     return (
-      <Link href={href} className='text-primary font-medium underline underline-offset-4'>
+      <Link href={href} className={className}>
         {children}
       </Link>
     );
   }
 
   return (
-    <a
-      href={href}
-      target='_blank'
-      rel='noreferrer'
-      className='text-primary font-medium underline underline-offset-4'
-    >
-      {children}
+    <a href={href} target='_blank' rel='noreferrer' className={cn(className, 'inline-flex gap-1')}>
+      <span>{children}</span>
+      <Icons.externalLink className='mt-1 h-3.5 w-3.5 shrink-0' />
     </a>
   );
 }
 
-const components = {
-  a: MdxLink,
-  h1: (props: HTMLAttributes<HTMLHeadingElement>) => (
-    <h1 className='text-4xl font-semibold tracking-tight text-balance' {...props} />
-  ),
-  h2: (props: HTMLAttributes<HTMLHeadingElement>) => (
-    <h2 className='mt-10 text-2xl font-semibold tracking-tight' {...props} />
-  ),
-  h3: (props: HTMLAttributes<HTMLHeadingElement>) => (
-    <h3 className='mt-8 text-xl font-semibold tracking-tight' {...props} />
-  ),
-  p: (props: HTMLAttributes<HTMLParagraphElement>) => (
-    <p className='text-muted-foreground mt-4 text-base leading-8' {...props} />
-  ),
-  ul: (props: HTMLAttributes<HTMLUListElement>) => (
-    <ul className='text-muted-foreground mt-4 list-disc space-y-2 pl-6' {...props} />
-  ),
-  ol: (props: HTMLAttributes<HTMLOListElement>) => (
-    <ol className='text-muted-foreground mt-4 list-decimal space-y-2 pl-6' {...props} />
-  ),
-  blockquote: (props: HTMLAttributes<HTMLQuoteElement>) => (
-    <blockquote
-      className='border-primary/30 bg-muted/40 text-foreground mt-6 rounded-2xl border-l-4 px-5 py-4 italic'
-      {...props}
-    />
-  ),
-  code: (props: HTMLAttributes<HTMLElement>) => (
-    <code className='bg-muted rounded px-1.5 py-0.5 text-sm' {...props} />
-  ),
-  pre: (props: HTMLAttributes<HTMLPreElement>) => (
-    <pre
-      className='bg-card mt-6 overflow-x-auto rounded-2xl border px-4 py-4 text-sm leading-7'
-      {...props}
-    />
-  ),
-  table: (props: HTMLAttributes<HTMLTableElement>) => (
-    <table className='mt-6 w-full border-collapse overflow-hidden rounded-2xl border' {...props} />
-  ),
-  th: (props: HTMLAttributes<HTMLTableCellElement>) => (
-    <th className='bg-muted/60 border px-3 py-2 text-left font-semibold' {...props} />
-  ),
-  td: (props: HTMLAttributes<HTMLTableCellElement>) => (
-    <td className='border px-3 py-2 align-top' {...props} />
-  ),
-  hr: () => <div className='border-border my-8 border-t' />
-};
+function MdxHeading({
+  as: Component,
+  getHeadingId,
+  className,
+  children,
+  ...props
+}: HTMLAttributes<HTMLHeadingElement> & {
+  as: 'h1' | 'h2' | 'h3' | 'h4';
+  getHeadingId: (children: ReactNode) => string | undefined;
+}) {
+  const id = getHeadingId(children);
+
+  return (
+    <Component id={id} className={className} {...props}>
+      {children}
+    </Component>
+  );
+}
 
 export async function DocMdx({ source }: { source: string }) {
+  const getHeadingId = createHeadingIdGetter();
+
+  const components = {
+    a: MdxLink,
+    h1: (props: HTMLAttributes<HTMLHeadingElement>) => (
+      <MdxHeading
+        as='h1'
+        getHeadingId={getHeadingId}
+        className='font-serif text-4xl leading-tight font-semibold tracking-[-0.02em] text-balance text-foreground sm:text-5xl'
+        {...props}
+      />
+    ),
+    h2: (props: HTMLAttributes<HTMLHeadingElement>) => (
+      <MdxHeading
+        as='h2'
+        getHeadingId={getHeadingId}
+        className='group scroll-mt-28 border-border/70 mt-14 border-t pt-8 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.9rem]'
+        {...props}
+      />
+    ),
+    h3: (props: HTMLAttributes<HTMLHeadingElement>) => (
+      <MdxHeading
+        as='h3'
+        getHeadingId={getHeadingId}
+        className='group scroll-mt-28 mt-10 text-xl font-semibold tracking-tight text-foreground'
+        {...props}
+      />
+    ),
+    h4: (props: HTMLAttributes<HTMLHeadingElement>) => (
+      <MdxHeading
+        as='h4'
+        getHeadingId={getHeadingId}
+        className='group scroll-mt-28 mt-8 text-lg font-semibold tracking-tight text-foreground'
+        {...props}
+      />
+    ),
+    p: (props: HTMLAttributes<HTMLParagraphElement>) => (
+      <p className='text-foreground/78 mt-5 text-[1.02rem] leading-8' {...props} />
+    ),
+    ul: (props: HTMLAttributes<HTMLUListElement>) => (
+      <ul className='text-foreground/78 mt-5 space-y-3 pl-5 marker:text-primary' {...props} />
+    ),
+    ol: (props: HTMLAttributes<HTMLOListElement>) => (
+      <ol className='text-foreground/78 mt-5 space-y-3 pl-5 marker:text-primary' {...props} />
+    ),
+    li: (props: HTMLAttributes<HTMLLIElement>) => <li className='pl-1 leading-8' {...props} />,
+    strong: (props: HTMLAttributes<HTMLElement>) => (
+      <strong className='font-semibold text-foreground' {...props} />
+    ),
+    blockquote: (props: HTMLAttributes<HTMLQuoteElement>) => (
+      <blockquote
+        className='mt-8 rounded-[1.6rem] border border-border/70 bg-muted/35 px-5 py-5 text-[1.02rem] italic text-foreground shadow-sm'
+        {...props}
+      />
+    ),
+    code: ({ className, ...props }: HTMLAttributes<HTMLElement>) => (
+      <code
+        className={cn(
+          'rounded-md border border-border/70 bg-muted/55 px-1.5 py-0.5 font-mono text-[0.92em] text-foreground',
+          className
+        )}
+        {...props}
+      />
+    ),
+    pre: (props: HTMLAttributes<HTMLPreElement>) => (
+      <pre
+        className='mt-8 overflow-x-auto rounded-[1.6rem] border border-border/70 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--card)_88%,transparent),color-mix(in_oklab,var(--muted)_26%,transparent))] px-5 py-5 text-sm leading-7 shadow-sm [&_code]:border-0 [&_code]:bg-transparent [&_code]:p-0'
+        {...props}
+      />
+    ),
+    table: (props: HTMLAttributes<HTMLTableElement>) => (
+      <div className='mt-8 overflow-hidden rounded-[1.4rem] border border-border/70 shadow-sm'>
+        <table className='w-full border-collapse bg-background/80 text-sm' {...props} />
+      </div>
+    ),
+    thead: (props: HTMLAttributes<HTMLTableSectionElement>) => (
+      <thead className='bg-muted/45' {...props} />
+    ),
+    th: (props: HTMLAttributes<HTMLTableCellElement>) => (
+      <th
+        className='border-border/70 border-b px-4 py-3 text-left font-semibold text-foreground'
+        {...props}
+      />
+    ),
+    td: (props: HTMLAttributes<HTMLTableCellElement>) => (
+      <td className='border-border/60 border-t px-4 py-3 align-top text-foreground/78' {...props} />
+    ),
+    hr: () => (
+      <div className='my-10 h-px bg-gradient-to-r from-transparent via-border to-transparent' />
+    )
+  };
+
   return (
-    <div className='[&_strong]:text-foreground'>
+    <article className='max-w-none [&_*]:scroll-mt-28'>
       <MDXRemote
         source={source}
         components={components}
@@ -83,6 +185,6 @@ export async function DocMdx({ source }: { source: string }) {
           }
         }}
       />
-    </div>
+    </article>
   );
 }
