@@ -12,7 +12,11 @@ import {
   renderResultHtml,
   tryParseJson
 } from '../../apps/vscode/src/diffmint.ts';
-import { renderHistoryCompareHtml, renderReviewSessionHtml } from '../../apps/vscode/src/render.ts';
+import {
+  renderHistoryCompareHtml,
+  renderReviewSessionHtml,
+  renderWorkspaceSummaryHtml
+} from '../../apps/vscode/src/render.ts';
 
 const tempDirs: string[] = [];
 
@@ -56,7 +60,9 @@ describe('vscode extension helpers', () => {
             name: 'Diffmint Core',
             slug: 'diffmint-core'
           },
-          provider: 'qwen',
+          provider: 'codex',
+          providerAuthMode: 'codex',
+          model: 'gpt-5-codex',
           policyVersionId: 'policy-v1'
         },
         null,
@@ -78,7 +84,9 @@ describe('vscode extension helpers', () => {
     const history = readDiffmintHistory(paths.historyPath, 5);
 
     expect(config?.workspace?.slug).toBe('diffmint-core');
-    expect(config?.provider).toBe('qwen');
+    expect(config?.provider).toBe('codex');
+    expect(config?.providerAuthMode).toBe('codex');
+    expect(config?.model).toBe('gpt-5-codex');
     expect(history[0]?.traceId).toBe('trace-new');
     expect(history[1]?.traceId).toBe('trace-old');
   });
@@ -94,6 +102,27 @@ describe('vscode extension helpers', () => {
   it('parses valid json payloads and ignores invalid ones', () => {
     expect(tryParseJson<{ ok: boolean }>('{"ok":true}')).toEqual({ ok: true });
     expect(tryParseJson('{not-json}')).toBeNull();
+  });
+
+  it('renders workspace summaries with provider auth metadata', () => {
+    const html = renderWorkspaceSummaryHtml(
+      {
+        workspace: {
+          id: 'ws_local',
+          name: 'Local Workspace'
+        },
+        provider: 'api',
+        providerAuthMode: 'api',
+        providerApiKeyEnvVar: 'OPENAI_API_KEY',
+        model: 'user-configured',
+        apiBaseUrl: 'https://diffmint.deplio.app'
+      },
+      'Configured local API-key auth.'
+    );
+
+    expect(html).toContain('Auth mode');
+    expect(html).toContain('OPENAI_API_KEY');
+    expect(html).toContain('user-configured');
   });
 
   it('renders review and history compare panels with finding excerpts', () => {

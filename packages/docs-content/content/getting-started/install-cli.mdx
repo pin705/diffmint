@@ -1,6 +1,6 @@
 ---
 title: Install the CLI
-description: Install the terminal workflow, approve the device, and verify the machine is review-ready.
+description: Install the terminal workflow, choose local or remote auth, and verify the machine is review-ready.
 section: Getting Started
 order: 20
 surfaces:
@@ -20,7 +20,8 @@ history checks, and diagnostics are expected to start.
 ## What this setup gives you
 
 - Review commands that stay close to your local git workflow
-- Browser-based device auth tied to the correct workspace
+- Browser-based device auth tied to the correct workspace when you need sync
+- Local Codex, Antigravity, or API-key auth when you want BYOK and zero hosted provider keys
 - Diagnostics that verify runtime, auth, and provider readiness
 - A stable foundation for both terminal and VS Code usage
 
@@ -32,7 +33,23 @@ npm install -g @unpijs/dm
 
 If you are working on the Diffmint monorepo itself, use `pnpm install` in the repo root instead.
 
-## 2. Sign in and approve the machine
+## 2. Choose how this machine authenticates
+
+Use the flow that matches your rollout stage:
+
+```bash
+dm auth login
+dm auth login codex
+dm auth login antigravity
+dm auth login api
+```
+
+- `dm auth login` keeps the control-plane device flow for workspace bootstrap, policy sync, and history upload.
+- `dm auth login codex` uses local Codex auth from `codex login`.
+- `dm auth login antigravity` keeps Antigravity auth on the user machine.
+- `dm auth login api` reads a local provider key from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `QWEN_API_KEY`, or `DASHSCOPE_API_KEY`.
+
+If you need the remote workspace flow, approve the device in your browser:
 
 ```bash
 dm auth login
@@ -40,18 +57,27 @@ dm auth login
 
 The browser flow lands on a dedicated device approval page. Sign in, switch to the correct
 workspace if needed, approve the device session, then return to the terminal. Approval is required
-before the CLI can fetch workspace bootstrap or sync review history.
+before the CLI can fetch workspace bootstrap or sync review history. The BYOK flows above do not
+upload provider keys to Diffmint.
 
 ## 3. Verify provider and machine health
 
 ```bash
-dm config set-provider qwen
 dm doctor
 ```
 
-If `qwen` is available on your machine and your provider credentials are configured, review runs
-will use Qwen headless mode automatically. Otherwise Diffmint stays in scaffold mode so onboarding
-and local testing still work.
+`dm doctor` reports:
+
+- the selected provider, auth mode, and model
+- whether Codex, Antigravity, Qwen, or a local API key are available
+- whether the machine is connected to a control plane or running local-only
+
+You can override the defaults later with:
+
+```bash
+dm config set-provider codex
+dm config set-model gpt-5-codex
+```
 
 ## 4. Run the commands users depend on most
 

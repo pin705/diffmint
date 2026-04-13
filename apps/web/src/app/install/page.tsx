@@ -18,12 +18,12 @@ const installCards = [
   {
     title: 'CLI',
     description:
-      'Use Diffmint from the terminal for login, review, explain, tests, history, and doctor.',
+      'Use Diffmint from the terminal for BYOK auth, optional workspace sync, review, explain, tests, history, and doctor.',
     steps: [
       { label: 'Install the public CLI package', command: 'npm install -g @unpijs/dm' },
       {
-        label: 'Sign in and approve the device flow in your browser',
-        command: 'dm auth login'
+        label: 'Choose a sign-in mode: control plane, Codex, Antigravity, or API key',
+        command: 'dm auth login codex'
       },
       { label: 'Check local setup and runtime health', command: 'dm doctor' }
     ] satisfies InstallStep[]
@@ -31,10 +31,10 @@ const installCards = [
   {
     title: 'VS Code',
     description:
-      'Install the editor companion. It can reuse the npm CLI or auto-bootstrap a managed one.',
+      'Install the editor companion. It can reuse the npm CLI or auto-bootstrap a managed one, then choose the same auth mode as the CLI.',
     steps: [
       { label: 'Install the extension' },
-      { label: 'Sign in from the extension' },
+      { label: 'Sign in from the extension and choose a provider auth mode' },
       { label: 'Run Review Current Changes from the command palette' }
     ] satisfies InstallStep[]
   },
@@ -56,8 +56,8 @@ export default function InstallPage() {
         <p className='text-primary text-sm font-medium uppercase tracking-[0.24em]'>Install</p>
         <h1 className='text-4xl font-semibold tracking-tight'>Set up Diffmint end to end.</h1>
         <p className='text-muted-foreground text-lg'>
-          Start with the CLI, add the VS Code extension, then finish the workspace rollout from the
-          control plane.
+          Start with the CLI, choose BYOK or workspace auth, add the VS Code extension, then decide
+          whether you need control-plane rollout at all.
         </p>
       </div>
       <div className='grid gap-4 lg:grid-cols-3'>

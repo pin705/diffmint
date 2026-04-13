@@ -15,10 +15,14 @@ related:
 
 ## Auth
 
-Use browser-based device auth to connect a machine to the correct workspace:
+Use browser-based device auth when you need control-plane sync, or local BYOK auth when you want
+to keep provider credentials on the user machine:
 
 ```bash
 dm auth login
+dm auth login codex
+dm auth login antigravity
+dm auth login api
 dm auth logout
 ```
 
@@ -27,13 +31,20 @@ so the CLI can fetch bootstrap, read synced history, and upload review artifacts
 session. Successful sign-in also registers the local CLI version, platform, and release channel in
 the workspace control plane for support and release governance.
 
+The local BYOK variants do not upload provider keys to Diffmint:
+
+- `dm auth login codex` uses `codex login` as the local auth source
+- `dm auth login antigravity` keeps Antigravity auth local to the machine
+- `dm auth login api` reads a local provider key from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `QWEN_API_KEY`, or `DASHSCOPE_API_KEY`
+
 ## Provider configuration
 
 ```bash
-dm config set-provider qwen
+dm config set-provider codex
+dm config set-model gpt-5-codex
 ```
 
-Set the provider once per machine or workspace context, then validate with `dm doctor`.
+Set the provider and model once per machine or workspace context, then validate with `dm doctor`.
 
 ## Review workflows
 
@@ -51,10 +62,11 @@ Use the mode that matches the scope of your intent:
 - `dm review --base origin/main` for branch-level review
 - `dm review --files ...` for surgical review on a specific surface
 
-When Qwen Code is installed locally and a compatible provider key is present, `dm review`
-uses the Qwen headless runtime and records the raw provider output as an artifact. When Qwen is
-missing, unauthenticated, or disabled with `DIFFMINT_REVIEW_RUNTIME=scaffold`, the CLI falls back
-to the built-in scaffold reviewer so local review never blocks.
+When Codex is installed locally and authenticated, `dm review` uses the Codex runtime and records
+the raw provider output as an artifact. When the selected provider is Qwen and the local runtime is
+available, Diffmint uses Qwen headless mode. When the selected runtime is missing, unauthenticated,
+or disabled with `DIFFMINT_REVIEW_RUNTIME=scaffold`, the CLI falls back to the built-in scaffold
+reviewer so local review never blocks.
 
 ## Explain and tests
 

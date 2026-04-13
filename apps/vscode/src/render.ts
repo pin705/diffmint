@@ -326,7 +326,7 @@ export function renderWorkspaceSummaryHtml(
 
   return renderHtmlShell(
     workspace ? `Connected to ${workspace.name}.` : 'Diffmint sign-in completed.',
-    'The extension uses the local CLI for auth. This panel shows the resulting workspace context and raw command output.',
+    'The extension uses the local CLI for provider auth and optional control-plane device auth. This panel shows the resulting workspace context and raw command output.',
     [
       renderSection(
         'Workspace',
@@ -334,6 +334,9 @@ export function renderWorkspaceSummaryHtml(
           { label: 'Workspace', value: workspace?.name ?? 'not configured' },
           { label: 'Slug', value: workspace?.slug ?? 'n/a' },
           { label: 'Provider', value: config?.provider ?? 'unknown' },
+          { label: 'Auth mode', value: config?.providerAuthMode ?? 'unknown' },
+          { label: 'Model', value: config?.model ?? 'unknown' },
+          { label: 'API key env', value: config?.providerApiKeyEnvVar ?? 'n/a' },
           { label: 'Policy', value: config?.policyVersionId ?? 'not synced' },
           { label: 'Control plane', value: config?.apiBaseUrl ?? 'default' }
         ])

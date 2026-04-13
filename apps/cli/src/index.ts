@@ -125,8 +125,8 @@ function getDefaultModelForProvider(provider?: string): string {
 
 function inferProviderAuthMode(
   provider?: string,
-  fallback: LocalConfig['providerAuthMode'] = 'api'
-): LocalConfig['providerAuthMode'] {
+  fallback: NonNullable<LocalConfig['providerAuthMode']> = 'api'
+): NonNullable<LocalConfig['providerAuthMode']> {
   if (provider === 'codex') {
     return 'codex';
   }
@@ -181,12 +181,14 @@ function buildDefaultSyncDefaults(config: LocalConfig): NonNullable<LocalConfig[
 }
 
 function getEffectiveProviderSelection(config: LocalConfig): LocalProviderSelection {
-  if (config.provider && config.model && config.providerAuthMode) {
+  if (config.provider) {
     return {
       provider: config.provider,
-      model: config.model,
-      providerAuthMode: config.providerAuthMode,
-      providerApiKeyEnvVar: config.providerApiKeyEnvVar
+      model: config.model ?? getDefaultModelForProvider(config.provider),
+      providerAuthMode: config.providerAuthMode ?? inferProviderAuthMode(config.provider),
+      providerApiKeyEnvVar:
+        config.providerApiKeyEnvVar ??
+        (inferProviderAuthMode(config.provider) === 'api' ? detectLocalApiKeySource() : undefined)
     };
   }
 

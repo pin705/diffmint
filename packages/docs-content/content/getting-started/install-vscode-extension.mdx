@@ -29,8 +29,9 @@ available, and falls back to an auto-installed managed CLI when it is not.
 2. Run any Diffmint command once. If `dm` is not on PATH and `diffmint.cliPath` is still the default, the extension will install a managed CLI automatically.
 3. Set `diffmint.webBaseUrl` if you are pointing the extension at a self-hosted or local control plane instead of `https://diffmint.deplio.app`.
 4. Click **Sign In** in the extension.
-5. Complete browser auth and return to the editor.
-6. Run **Review Current Changes** from the command palette.
+5. Choose whether the machine should use control-plane auth, local Codex auth, local Antigravity auth, or a local API key.
+6. Complete browser auth only if you selected the control-plane flow, then return to the editor.
+7. Run **Review Current Changes** from the command palette.
 
 If your organization manages the CLI separately, set `diffmint.cliPath` to that binary and the
 extension will use it instead of the managed fallback.

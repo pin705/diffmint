@@ -243,6 +243,47 @@ function updateStatusBar(item: vscode.StatusBarItem): void {
   item.command = 'diffmint.openDashboard';
 }
 
+async function pickSignInCommand(): Promise<{ title: string; args: string[] } | null> {
+  const selection = await vscode.window.showQuickPick(
+    [
+      {
+        label: 'Control Plane Workspace',
+        description: 'Remote device flow for workspace sync and policy bootstrap',
+        title: 'Diffmint Sign In',
+        args: ['auth', 'login']
+      },
+      {
+        label: 'Codex',
+        description: 'Use local Codex auth without hosting provider keys',
+        title: 'Diffmint Sign In (Codex)',
+        args: ['auth', 'login', 'codex']
+      },
+      {
+        label: 'Antigravity',
+        description: 'Use local Antigravity auth without hosting provider keys',
+        title: 'Diffmint Sign In (Antigravity)',
+        args: ['auth', 'login', 'antigravity']
+      },
+      {
+        label: 'API Key From Env',
+        description: 'Use OPENAI_API_KEY, ANTHROPIC_API_KEY, QWEN_API_KEY, or DASHSCOPE_API_KEY',
+        title: 'Diffmint Sign In (API)',
+        args: ['auth', 'login', 'api']
+      }
+    ],
+    {
+      placeHolder: 'Choose how Diffmint should authenticate this machine'
+    }
+  );
+
+  return selection
+    ? {
+        title: selection.title,
+        args: selection.args
+      }
+    : null;
+}
+
 function renderReviewResult(raw: string): RenderedResult {
   const session = tryParseJson<ReviewSessionView>(raw);
 
@@ -573,7 +614,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   const actionsProvider = new DiffmintTreeProvider(() => [
     createItem('Sign In / Switch Workspace', {
-      description: 'Connect the local CLI to the configured control plane',
+      description: 'Choose control-plane auth or local Codex, Antigravity, or API auth',
       command: {
         command: 'diffmint.signIn',
         title: 'Sign In / Switch Workspace'
@@ -692,7 +733,12 @@ export function activate(context: vscode.ExtensionContext) {
         iconPath: new vscode.ThemeIcon('organization')
       }),
       createItem(`Provider: ${config.provider ?? 'unknown'}`, {
+        description: config.providerAuthMode ?? 'unknown mode',
         iconPath: new vscode.ThemeIcon('server')
+      }),
+      createItem(`Model: ${config.model ?? 'unknown'}`, {
+        description: config.providerApiKeyEnvVar ?? undefined,
+        iconPath: new vscode.ThemeIcon('symbol-key')
       }),
       createItem(`Policy: ${config.policyVersionId ?? 'not synced'}`, {
         iconPath: new vscode.ThemeIcon('shield')
@@ -1020,9 +1066,15 @@ export function activate(context: vscode.ExtensionContext) {
       );
     }),
     vscode.commands.registerCommand('diffmint.signIn', async () => {
+      const signInCommand = await pickSignInCommand();
+
+      if (!signInCommand) {
+        return;
+      }
+
       await runAndShow(
-        'Diffmint Sign In',
-        ['auth', 'login'],
+        signInCommand.title,
+        signInCommand.args,
         runCli,
         latestResultRef,
         latestReviewRef,

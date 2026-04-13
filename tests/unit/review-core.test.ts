@@ -342,6 +342,86 @@ describe('review core', () => {
     }
   });
 
+  it('uses the Codex runtime when local Codex auth is available', async () => {
+    const originalPath = process.env.PATH;
+    const { repoDir, filePath } = createRepoWithChangedFile('src/codex-runtime.ts');
+    const binDir = makeTempDir('diffmint-codex-bin-');
+    const codexPath = path.join(binDir, 'codex');
+
+    writeFileSync(
+      codexPath,
+      [
+        '#!/bin/sh',
+        'if [ "$1" = "--version" ]; then',
+        '  echo "codex-cli 0.0.1"',
+        '  exit 0',
+        'fi',
+        'if [ "$1" = "login" ] && [ "$2" = "status" ]; then',
+        '  echo "Logged in using ChatGPT"',
+        '  exit 0',
+        'fi',
+        'if [ "$1" = "exec" ]; then',
+        '  output_path=""',
+        '  while [ "$#" -gt 0 ]; do',
+        '    if [ "$1" = "--output-last-message" ]; then',
+        '      shift',
+        '      output_path="$1"',
+        '    fi',
+        '    shift',
+        '  done',
+        '  cat >/dev/null',
+        `  printf '%s' '${JSON.stringify({
+          summary: 'Runtime review completed through Codex.',
+          findings: [
+            {
+              severity: 'high',
+              title: 'Codex runtime finding',
+              summary: 'The mocked Codex runtime produced a structured finding.',
+              filePath,
+              suggestedAction: 'Validate the changed surface before merge.'
+            }
+          ]
+        })}' > "$output_path"`,
+        '  exit 0',
+        'fi',
+        'exit 1'
+      ].join('\n'),
+      { encoding: 'utf8', mode: 0o755 }
+    );
+
+    process.env.PATH = `${binDir}:${originalPath ?? ''}`;
+
+    try {
+      const request = buildReviewRequest({
+        cwd: repoDir,
+        source: 'selected_files',
+        files: [filePath],
+        provider: 'codex',
+        model: 'gpt-5-codex'
+      });
+      const session = await createReviewSessionWithRuntime(request, {
+        cwd: repoDir,
+        provider: 'codex',
+        model: 'gpt-5-codex'
+      });
+
+      expect(session.provider).toBe('codex');
+      expect(session.model).toBe('gpt-5-codex');
+      expect(session.summary).toBe('Runtime review completed through Codex.');
+      expect(session.severityCounts.high).toBe(1);
+      expect(session.findings[0]?.title).toBe('Codex runtime finding');
+      expect(session.artifacts.some((artifact) => artifact.label === 'Codex Exec Output')).toBe(
+        true
+      );
+    } finally {
+      if (originalPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = originalPath;
+      }
+    }
+  });
+
   it('reports the configured API base URL in doctor output', () => {
     const originalBaseUrl = process.env.DIFFMINT_API_BASE_URL;
     process.env.DIFFMINT_API_BASE_URL = 'http://localhost:3000';
