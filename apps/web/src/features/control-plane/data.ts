@@ -48,11 +48,11 @@ export const workspaceSeed: WorkspaceBootstrap['workspace'] = {
 export const workspaceRole: WorkspaceBootstrap['role'] = 'owner';
 
 export const workspaceQuotas: WorkspaceBootstrap['quotas'] = {
-  includedCredits: 200000,
-  remainingCredits: 156000,
-  seats: 26,
-  seatLimit: 30,
-  spendCapUsd: 500
+  includedCredits: 0,
+  remainingCredits: 0,
+  seats: 0,
+  seatLimit: 0,
+  spendCapUsd: 0
 };
 
 export const workspaceSyncDefaults: WorkspaceBootstrap['syncDefaults'] = {
@@ -67,194 +67,56 @@ export const providerSummaries: ProviderConfigSummary[] = [
     provider: 'qwen',
     mode: 'managed',
     defaultModel: 'qwen-code',
-    allowedModels: ['qwen-code', 'qwen-max'],
-    fallbackProvider: 'openai-compatible',
+    allowedModels: ['qwen-code'],
     rateLimitPerMinute: 60,
     encrypted: true,
-    updatedAt: '2026-04-12T08:30:00.000Z'
-  },
-  {
-    id: 'provider-byok-lab',
-    provider: 'openai-compatible',
-    mode: 'byok',
-    defaultModel: 'gpt-5.4-mini',
-    allowedModels: ['gpt-5.4-mini', 'gpt-5.4'],
-    fallbackProvider: 'qwen',
-    rateLimitPerMinute: 30,
-    encrypted: true,
-    updatedAt: '2026-04-10T16:15:00.000Z'
+    updatedAt: '2026-04-13T00:00:00.000Z'
   }
 ];
 
 const defaultPolicy = createDefaultPolicyBundle(workspaceId);
 
-export const policyBundles: PolicyBundle[] = [
-  defaultPolicy,
-  {
-    ...defaultPolicy,
-    policyVersionId: 'frontend-docs-v2',
-    version: '2.0.0',
-    checksum: 'frontend-docs-v2',
-    name: 'Frontend and Docs Rules',
-    summary: 'Extra guidance for docs integrity, changelog gating, and provider UX.',
-    publishedAt: '2026-04-11T09:00:00.000Z'
-  }
-];
+export const policyBundles: PolicyBundle[] = [defaultPolicy];
 
-export const reviewSessions: ReviewSession[] = [
-  {
-    id: 'review-001',
-    traceId: 'trace-diffmint-001',
-    requestId: 'request-001',
-    workspaceId,
-    source: 'branch_compare',
-    commandSource: 'cli',
-    provider: 'qwen',
-    model: 'qwen-code',
-    policyVersionId: defaultPolicy.policyVersionId,
-    status: 'completed',
-    summary: 'Docs and control-plane review completed with two medium findings.',
-    severityCounts: { low: 0, medium: 2, high: 0, critical: 0 },
-    findings: [],
-    durationMs: 14300,
-    startedAt: '2026-04-12T09:00:00.000Z',
-    completedAt: '2026-04-12T09:00:14.300Z',
-    artifacts: []
-  },
-  {
-    id: 'review-002',
-    traceId: 'trace-diffmint-002',
-    requestId: 'request-002',
-    workspaceId,
-    source: 'selected_files',
-    commandSource: 'vscode',
-    provider: 'qwen',
-    model: 'qwen-code',
-    policyVersionId: 'frontend-docs-v2',
-    status: 'completed',
-    summary: 'Selected files review flagged a missing verification note on provider settings.',
-    severityCounts: { low: 1, medium: 1, high: 0, critical: 0 },
-    findings: [],
-    durationMs: 9800,
-    startedAt: '2026-04-12T08:12:00.000Z',
-    completedAt: '2026-04-12T08:12:09.800Z',
-    artifacts: []
-  },
-  {
-    id: 'review-003',
-    traceId: 'trace-diffmint-003',
-    requestId: 'request-003',
-    workspaceId,
-    source: 'local_diff',
-    commandSource: 'cli',
-    provider: 'qwen',
-    model: 'qwen-code',
-    policyVersionId: defaultPolicy.policyVersionId,
-    status: 'completed',
-    summary: 'Local diff review caught an auth path update without explicit test coverage.',
-    severityCounts: { low: 0, medium: 0, high: 1, critical: 0 },
-    findings: [],
-    durationMs: 12100,
-    startedAt: '2026-04-11T14:32:00.000Z',
-    completedAt: '2026-04-11T14:32:12.100Z',
-    artifacts: []
-  }
-];
+export const reviewSessions: ReviewSession[] = [];
 
-export const releaseManifests: ReleaseManifest[] = [
-  {
-    channel: 'stable',
-    version: '0.1.0',
-    releasedAt: '2026-04-12T00:00:00.000Z',
-    cli: {
-      version: '0.1.0',
-      downloadUrl: 'https://diffmint.io/downloads/dm',
-      checksum: 'sha256-cli'
-    },
-    vscode: {
-      version: '0.1.0',
-      marketplaceUrl: 'https://diffmint.io/downloads/vscode',
-      checksum: 'sha256-vscode'
-    },
-    notesUrl: 'https://diffmint.io/docs/changelog/2026-04-foundation'
-  }
-];
+export const releaseManifests: ReleaseManifest[] = [];
 
-export const usageEvents: UsageEvent[] = [
-  {
-    id: 'usage-001',
-    workspaceId,
-    actorId: 'user_diffmint_owner',
-    source: 'cli',
-    event: 'review.completed',
-    creditsDelta: -1200,
-    metadata: {
-      traceId: 'trace-diffmint-001',
-      commandSource: 'cli'
-    },
-    createdAt: '2026-04-12T09:00:15.000Z'
-  }
-];
+export const usageEvents: UsageEvent[] = [];
 
 export const billingWorkspaceSeed: BillingWorkspaceSeed = {
   workspaceId,
   workspaceName: workspaceSeed.name,
-  customerId: 'cus_diffmint_core',
-  planKey: 'team',
+  planKey: 'free',
   subscriptionStatus: 'active',
-  seatsUsed: 26,
-  seatLimit: 30,
-  creditsIncluded: 200000,
-  creditsRemaining: 156000,
-  spendCapUsd: 500
+  seatsUsed: 0,
+  seatLimit: 0,
+  creditsIncluded: 0,
+  creditsRemaining: 0,
+  spendCapUsd: 0
 };
 
-export const auditEvents: AuditEventRecord[] = [
-  {
-    id: 'audit-001',
-    event: 'policy.version_published',
-    actor: 'Quynh Tran',
-    target: 'Frontend and Docs Rules v2.0.0',
-    when: '2026-04-11 09:00 UTC',
-    detail: 'Published new guidance for docs links and changelog gating.'
-  },
-  {
-    id: 'audit-002',
-    event: 'provider.config_updated',
-    actor: 'Bao Nguyen',
-    target: 'Managed Qwen provider',
-    when: '2026-04-10 16:15 UTC',
-    detail: 'Added OpenAI-compatible fallback and lowered rate limit for BYOK traffic.'
-  },
-  {
-    id: 'audit-003',
-    event: 'review.synced',
-    actor: 'Diffmint CLI',
-    target: 'trace-diffmint-001',
-    when: '2026-04-12 09:00 UTC',
-    detail: 'Uploaded summary, severity counts, and markdown artifact.'
-  }
-];
+export const auditEvents: AuditEventRecord[] = [];
 
 export const overviewStats: OverviewStat[] = [
   {
     label: 'Synced reviews',
-    value: '148',
-    helper: '+18 this week'
+    value: '0',
+    helper: 'No synced reviews yet'
   },
   {
     label: 'Active seats',
-    value: '26 / 30',
-    helper: '4 seats remaining'
+    value: '0 / 0',
+    helper: 'Free workspace'
   },
   {
     label: 'Published policies',
-    value: '2',
-    helper: '1 version live'
+    value: '1',
+    helper: defaultPolicy.version
   },
   {
     label: 'Quota remaining',
-    value: '78%',
-    helper: 'Managed provider credits'
+    value: '0%',
+    helper: 'No managed quota assigned'
   }
 ];

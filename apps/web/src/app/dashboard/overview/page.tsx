@@ -25,7 +25,7 @@ export default async function OverviewPage() {
   return (
     <PageContainer
       pageTitle='Workspace Overview'
-      pageDescription='CLI and VS Code stay primary. This dashboard manages policies, providers, Polar billing, history, audit, and docs.'
+      pageDescription='CLI and VS Code stay primary. This dashboard manages policies, providers, free-plan quota, history, audit, and docs.'
       infoContent={overviewInfoContent}
     >
       <ControlPlaneOverviewPage

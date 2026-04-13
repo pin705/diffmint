@@ -57,30 +57,36 @@ export function ControlPlaneOverviewPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Trace ID</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Policy</TableHead>
-                  <TableHead>Summary</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reviewSessions.map((session) => (
-                  <TableRow key={session.id}>
-                    <TableCell className='font-medium'>{session.traceId}</TableCell>
-                    <TableCell>
-                      {session.commandSource} / {session.source}
-                    </TableCell>
-                    <TableCell>{session.policyVersionId}</TableCell>
-                    <TableCell className='max-w-md whitespace-normal text-sm'>
-                      {session.summary}
-                    </TableCell>
+            {reviewSessions.length === 0 ? (
+              <div className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'>
+                No review history has synced yet. The first CLI or VS Code upload will appear here.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Trace ID</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Policy</TableHead>
+                    <TableHead>Summary</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {reviewSessions.map((session) => (
+                    <TableRow key={session.id}>
+                      <TableCell className='font-medium'>{session.traceId}</TableCell>
+                      <TableCell>
+                        {session.commandSource} / {session.source}
+                      </TableCell>
+                      <TableCell>{session.policyVersionId}</TableCell>
+                      <TableCell className='max-w-md whitespace-normal text-sm'>
+                        {session.summary}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -152,19 +158,25 @@ export function ControlPlaneOverviewPage({
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-3'>
-            {providerSummaries.map((provider) => (
-              <div key={provider.id} className='rounded-2xl border px-4 py-3'>
-                <div className='flex items-center justify-between gap-3'>
-                  <div>
-                    <p className='font-medium capitalize'>{provider.provider}</p>
-                    <p className='text-muted-foreground text-sm'>
-                      {provider.mode} · default model {provider.defaultModel}
-                    </p>
-                  </div>
-                  <Badge variant='outline'>{provider.rateLimitPerMinute}/min</Badge>
-                </div>
+            {providerSummaries.length === 0 ? (
+              <div className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'>
+                No provider configuration has been saved for this workspace yet.
               </div>
-            ))}
+            ) : (
+              providerSummaries.map((provider) => (
+                <div key={provider.id} className='rounded-2xl border px-4 py-3'>
+                  <div className='flex items-center justify-between gap-3'>
+                    <div>
+                      <p className='font-medium capitalize'>{provider.provider}</p>
+                      <p className='text-muted-foreground text-sm'>
+                        {provider.mode} · default model {provider.defaultModel}
+                      </p>
+                    </div>
+                    <Badge variant='outline'>{provider.rateLimitPerMinute}/min</Badge>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -176,17 +188,23 @@ export function ControlPlaneOverviewPage({
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-3'>
-            {policyBundles.map((policy) => (
-              <div key={policy.policyVersionId} className='rounded-2xl border px-4 py-3'>
-                <div className='flex items-center justify-between gap-3'>
-                  <div>
-                    <p className='font-medium'>{policy.name}</p>
-                    <p className='text-muted-foreground text-sm'>{policy.summary}</p>
-                  </div>
-                  <Badge>{policy.version}</Badge>
-                </div>
+            {policyBundles.length === 0 ? (
+              <div className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'>
+                No policy has been published for this workspace yet.
               </div>
-            ))}
+            ) : (
+              policyBundles.map((policy) => (
+                <div key={policy.policyVersionId} className='rounded-2xl border px-4 py-3'>
+                  <div className='flex items-center justify-between gap-3'>
+                    <div>
+                      <p className='font-medium'>{policy.name}</p>
+                      <p className='text-muted-foreground text-sm'>{policy.summary}</p>
+                    </div>
+                    <Badge>{policy.version}</Badge>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

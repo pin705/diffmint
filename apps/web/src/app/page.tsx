@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CopyButton } from '@/components/ui/copy-button';
 import { getServerAuthContext } from '@/lib/clerk/server-auth';
 import { siteConfig } from '@/lib/site';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import Script from 'next/script';
 
@@ -16,10 +17,10 @@ const heroBullets = [
 ];
 
 const terminalLines = [
-  '$ dm auth login',
-  'Opened device flow in your browser',
-  '$ dm review --base origin/main',
-  '3 findings · 1 policy note · 1 missing test'
+  { kind: 'prompt', text: 'dm auth login' },
+  { kind: 'output', text: 'Opened device flow in your browser' },
+  { kind: 'prompt', text: 'dm review --base origin/main' },
+  { kind: 'output', text: '3 findings · 1 policy note · 1 missing test' }
 ];
 
 const findings = [
@@ -184,60 +185,87 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className='rounded-[2rem] border border-white/10 bg-[#0a0f1b] p-4 text-white shadow-2xl sm:p-5'>
-            <div className='mb-4 flex items-center justify-between gap-3 border-b border-white/10 pb-4'>
+          <div className='rounded-[2rem] border border-border/70 bg-card/92 p-4 text-card-foreground shadow-[0_26px_90px_color-mix(in_oklab,var(--foreground)_12%,transparent)] backdrop-blur sm:p-5'>
+            <div className='mb-4 flex items-center justify-between gap-3 border-b border-border/70 pb-4'>
               <div className='flex items-center gap-2'>
-                <span className='h-2.5 w-2.5 rounded-full bg-white/90' />
-                <span className='h-2.5 w-2.5 rounded-full bg-white/35' />
-                <span className='h-2.5 w-2.5 rounded-full bg-emerald-400' />
+                <span className='bg-foreground/90 h-2.5 w-2.5 rounded-full' />
+                <span className='bg-muted-foreground/35 h-2.5 w-2.5 rounded-full' />
+                <span className='bg-primary h-2.5 w-2.5 rounded-full' />
               </div>
               <div className='flex items-center gap-2'>
-                <span className='rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-white/70'>
+                <span className='text-muted-foreground rounded-full border border-border/70 bg-background/80 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em]'>
                   local review
                 </span>
                 <CopyButton
                   text='dm review --base origin/main'
-                  className='border-white/10 bg-white/8 text-white hover:bg-white/14'
+                  className='border-border/70 bg-background/80 text-foreground hover:bg-accent/80'
                 />
               </div>
             </div>
 
             <div className='space-y-4 font-mono text-sm'>
-              <div className='space-y-2 rounded-[1.35rem] border border-white/10 bg-black/25 px-4 py-4'>
-                {terminalLines.map((line, index) => (
+              <div className='space-y-2 rounded-[1.35rem] border border-border/70 bg-background/78 px-4 py-4 shadow-[inset_0_1px_0_color-mix(in_oklab,var(--foreground)_8%,transparent)]'>
+                {terminalLines.map((line) => (
                   <div
-                    key={line}
-                    className={
-                      index < 2 ? 'text-white/92' : index === 2 ? 'text-cyan-300' : 'text-white/55'
-                    }
+                    key={line.text}
+                    className={cn(
+                      'flex items-start gap-3 leading-6',
+                      line.kind === 'output' && 'text-muted-foreground'
+                    )}
                   >
-                    {line}
+                    {line.kind === 'prompt' ? (
+                      <>
+                        <span className='text-primary'>$</span>
+                        <span className='text-foreground'>{line.text}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className='text-muted-foreground/0 select-none'>$</span>
+                        <span>{line.text}</span>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
 
-              <div className='overflow-hidden rounded-[1.35rem] border border-white/10 bg-white/[0.04]'>
-                <div className='grid grid-cols-[minmax(0,1fr)_80px] gap-3 border-b border-white/10 px-4 py-3 text-[11px] uppercase tracking-[0.18em] text-white/45'>
+              <div className='overflow-hidden rounded-[1.35rem] border border-border/70 bg-background/55'>
+                <div className='text-muted-foreground grid grid-cols-[minmax(0,1fr)_88px] gap-3 border-b border-border/70 px-4 py-3 text-[11px] uppercase tracking-[0.18em]'>
                   <span>File</span>
                   <span>Level</span>
                 </div>
-                <div className='divide-y divide-white/10'>
+                <div className='divide-y divide-border/70'>
                   {findings.map((item) => (
                     <div
                       key={item.file}
-                      className='grid grid-cols-[minmax(0,1fr)_80px] gap-3 px-4 py-4'
+                      className='grid grid-cols-[minmax(0,1fr)_88px] gap-3 px-4 py-4'
                     >
                       <div className='min-w-0'>
-                        <p className='truncate text-white/92'>{item.file}</p>
-                        <p className='mt-1 text-xs leading-6 text-white/55'>{item.detail}</p>
+                        <p className='truncate text-foreground'>{item.file}</p>
+                        <p className='text-muted-foreground mt-1 text-xs leading-6'>
+                          {item.detail}
+                        </p>
                       </div>
-                      <div className='pt-0.5 text-right text-xs text-white/72'>{item.level}</div>
+                      <div className='pt-0.5 text-right'>
+                        <span
+                          className={cn(
+                            'inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium',
+                            item.level === 'High' &&
+                              'border-destructive/25 bg-destructive/10 text-destructive',
+                            item.level === 'Policy' &&
+                              'border-primary/25 bg-primary/10 text-primary',
+                            item.level === 'Process' &&
+                              'border-border bg-muted text-muted-foreground'
+                          )}
+                        >
+                          {item.level}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className='flex items-center justify-between rounded-[1.1rem] border border-dashed border-white/10 px-4 py-3 text-xs text-white/55'>
+              <div className='text-muted-foreground flex items-center justify-between rounded-[1.1rem] border border-dashed border-border/70 bg-background/45 px-4 py-3 text-xs'>
                 <span>policy: secure-web-v12</span>
                 <span>sync: workspace/history</span>
               </div>

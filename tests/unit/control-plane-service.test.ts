@@ -65,7 +65,7 @@ describe('control plane service', () => {
 
     expect(bootstrap.workspace.slug).toBe('diffmint-core');
     expect(bootstrap.policy.policyVersionId).toBeTruthy();
-    expect(stats.find((stat) => stat.label === 'Active seats')?.value).toBe('26 / 30');
+    expect(stats.find((stat) => stat.label === 'Active seats')?.value).toBe('0 / 0');
     expect(stats.find((stat) => stat.label === 'Published policies')?.helper).toContain('active');
   });
 

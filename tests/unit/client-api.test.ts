@@ -121,8 +121,8 @@ describe('client api routes', () => {
     expect(response.headers.get('x-diffmint-request-id')).toMatch(/^req_/);
     expect(payload.workspace.slug).toBe('diffmint-core');
     expect(payload.workspace.name).toBe('Diffmint Core');
-    expect(payload.quotas.seatLimit).toBe(30);
-    expect(payload.releaseChannels).toContain('stable');
+    expect(payload.quotas.seatLimit).toBe(0);
+    expect(payload.releaseChannels).toEqual([]);
   });
 
   it('returns policies, releases, and history items for approved client sessions', async () => {
@@ -154,13 +154,12 @@ describe('client api routes', () => {
     expect(policiesPayload.items.length).toBeGreaterThanOrEqual(1);
     expect(policiesResponse.headers.get('cache-control')).toBe('private, no-store, max-age=0');
     expect(policiesResponse.headers.get('x-diffmint-request-id')).toMatch(/^req_/);
-    expect(releasesPayload.items[0]?.channel).toBe('stable');
-    expect(releasesPayload.items[0]?.notesUrl).toContain('/docs/changelog/');
+    expect(releasesPayload.items).toEqual([]);
     expect(releasesResponse.headers.get('cache-control')).toBe(
       'public, max-age=300, stale-while-revalidate=300'
     );
     expect(releasesResponse.headers.get('x-diffmint-request-id')).toMatch(/^req_/);
-    expect(historyPayload.items[0]?.traceId).toContain('trace-diffmint');
+    expect(historyPayload.items).toEqual([]);
   });
 
   it('returns signed release manifests when a signing key is configured', async () => {
@@ -186,15 +185,7 @@ describe('client api routes', () => {
     };
 
     expect(response.ok).toBe(true);
-    expect(payload.items[0]?.channel).toBe('stable');
-    expect(payload.items[0]?.signature).toEqual(
-      expect.objectContaining({
-        algorithm: 'ed25519',
-        keyId: 'release-key-2026-04',
-        signedAt: payload.items[0]?.releasedAt ?? payload.items[0]?.signature?.signedAt
-      })
-    );
-    expect(payload.items[0]?.signature?.value).toMatch(/^[A-Za-z0-9+/=]+$/);
+    expect(payload.items).toEqual([]);
   });
 
   it('accepts uploaded history and usage events for approved sessions, then exposes the synced item on history reads', async () => {

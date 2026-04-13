@@ -11,17 +11,27 @@ interface BillingPageContentProps {
 }
 
 export function BillingPageContent({ summary }: BillingPageContentProps) {
+  const isFreePlan = summary.planKey === 'free';
+
   return (
     <div className='space-y-6'>
       <Alert>
         <Icons.info className='h-4 w-4' />
         <AlertDescription>
-          Polar is the billing provider for workspace plans, checkouts, invoices, and customer
-          portal sessions. Clerk continues to handle identity and organizations.
+          Clerk continues to handle identity and organizations. Billing stays on the free workspace
+          plan unless you explicitly enable paid Polar flows later.
         </AlertDescription>
       </Alert>
 
-      {!summary.configured ? (
+      {isFreePlan ? (
+        <Alert>
+          <Icons.check className='h-4 w-4' />
+          <AlertDescription>
+            This workspace is currently on the free plan. No upgrade catalog or paid checkout flow
+            is exposed in the app.
+          </AlertDescription>
+        </Alert>
+      ) : !summary.configured ? (
         <Alert variant='destructive'>
           <Icons.warning className='h-4 w-4' />
           <AlertDescription>
@@ -64,46 +74,70 @@ export function BillingPageContent({ summary }: BillingPageContentProps) {
       </div>
 
       <div className='grid gap-4 xl:grid-cols-[1.1fr_0.9fr]'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Polar checkout flows</CardTitle>
-            <CardDescription>
-              Use env-backed product mappings so the billing page stays aligned with Polar products.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            {summary.checkoutTargets.map((target) => (
-              <div key={target.planKey} className='rounded-2xl border px-4 py-4'>
-                <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
-                  <div className='space-y-1'>
-                    <div className='flex items-center gap-2'>
-                      <p className='font-medium'>{target.label}</p>
-                      {target.recommended ? <Badge>Recommended</Badge> : null}
+        {summary.checkoutTargets.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Polar checkout flows</CardTitle>
+              <CardDescription>
+                Use env-backed product mappings so the billing page stays aligned with Polar
+                products.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-3'>
+              {summary.checkoutTargets.map((target) => (
+                <div key={target.planKey} className='rounded-2xl border px-4 py-4'>
+                  <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+                    <div className='space-y-1'>
+                      <div className='flex items-center gap-2'>
+                        <p className='font-medium'>{target.label}</p>
+                        {target.recommended ? <Badge>Recommended</Badge> : null}
+                      </div>
+                      <p className='text-muted-foreground text-sm'>{target.description}</p>
+                      <p className='text-muted-foreground text-xs'>
+                        Polar product ID: {target.productId ?? 'Unconfigured'}
+                      </p>
                     </div>
-                    <p className='text-muted-foreground text-sm'>{target.description}</p>
-                    <p className='text-muted-foreground text-xs'>
-                      Polar product ID: {target.productId ?? 'Unconfigured'}
-                    </p>
+                    {target.checkoutUrl ? (
+                      <Button asChild>
+                        <Link href={target.checkoutUrl}>Open checkout</Link>
+                      </Button>
+                    ) : (
+                      <Button disabled>Configure product ID</Button>
+                    )}
                   </div>
-                  {target.checkoutUrl ? (
-                    <Button asChild>
-                      <Link href={target.checkoutUrl}>Open checkout</Link>
-                    </Button>
-                  ) : (
-                    <Button disabled>Configure product ID</Button>
-                  )}
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Free plan mode</CardTitle>
+              <CardDescription>
+                Paid checkout flows are disabled. The workspace stays on the free plan until you
+                decide to introduce paid billing later.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-2'>
+              {summary.notes.map((note) => (
+                <div
+                  key={note}
+                  className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'
+                >
+                  {note}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
-            <CardTitle>Customer portal</CardTitle>
+            <CardTitle>{summary.portalUrl ? 'Customer portal' : 'Billing state'}</CardTitle>
             <CardDescription>
-              Open the Polar customer portal for invoices, payment methods, and subscription
-              management.
+              {summary.portalUrl
+                ? 'Open the Polar customer portal for invoices, payment methods, and subscription management.'
+                : 'Review the current billing environment, quota state, and workspace notes.'}
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
@@ -132,16 +166,18 @@ export function BillingPageContent({ summary }: BillingPageContentProps) {
               </Button>
             )}
 
-            <div className='space-y-2'>
-              {summary.notes.map((note) => (
-                <div
-                  key={note}
-                  className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'
-                >
-                  {note}
-                </div>
-              ))}
-            </div>
+            {summary.checkoutTargets.length > 0 ? (
+              <div className='space-y-2'>
+                {summary.notes.map((note) => (
+                  <div
+                    key={note}
+                    className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'
+                  >
+                    {note}
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </div>

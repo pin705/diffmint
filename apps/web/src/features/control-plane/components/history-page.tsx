@@ -24,42 +24,48 @@ export function HistoryPageContent({ reviewSessions }: HistoryPageContentProps) 
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Trace ID</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Provider</TableHead>
-              <TableHead>Policy</TableHead>
-              <TableHead>Severities</TableHead>
-              <TableHead>Duration</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reviewSessions.map((session) => (
-              <TableRow key={session.id}>
-                <TableCell className='font-medium'>{session.traceId}</TableCell>
-                <TableCell>
-                  {session.commandSource} / {session.source}
-                </TableCell>
-                <TableCell>{session.provider}</TableCell>
-                <TableCell>{session.policyVersionId}</TableCell>
-                <TableCell>
-                  <div className='flex flex-wrap gap-2'>
-                    {Object.entries(session.severityCounts)
-                      .filter(([, count]) => count > 0)
-                      .map(([severity, count]) => (
-                        <Badge key={severity} variant='outline'>
-                          {severity}: {count}
-                        </Badge>
-                      ))}
-                  </div>
-                </TableCell>
-                <TableCell>{session.durationMs} ms</TableCell>
+        {reviewSessions.length === 0 ? (
+          <div className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'>
+            No review history has been synced yet.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Trace ID</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Provider</TableHead>
+                <TableHead>Policy</TableHead>
+                <TableHead>Severities</TableHead>
+                <TableHead>Duration</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {reviewSessions.map((session) => (
+                <TableRow key={session.id}>
+                  <TableCell className='font-medium'>{session.traceId}</TableCell>
+                  <TableCell>
+                    {session.commandSource} / {session.source}
+                  </TableCell>
+                  <TableCell>{session.provider}</TableCell>
+                  <TableCell>{session.policyVersionId}</TableCell>
+                  <TableCell>
+                    <div className='flex flex-wrap gap-2'>
+                      {Object.entries(session.severityCounts)
+                        .filter(([, count]) => count > 0)
+                        .map(([severity, count]) => (
+                          <Badge key={severity} variant='outline'>
+                            {severity}: {count}
+                          </Badge>
+                        ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>{session.durationMs} ms</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );

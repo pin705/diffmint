@@ -11,7 +11,7 @@ import { cookies } from 'next/headers';
 export const metadata: Metadata = {
   title: 'Diffmint Control Plane',
   description:
-    'Workspace governance, providers, Polar billing, synced review history, audit, and docs.',
+    'Workspace governance, providers, free-plan quota, synced review history, audit, and docs.',
   robots: {
     index: false,
     follow: false

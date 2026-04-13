@@ -53,9 +53,9 @@ export const billingInfoContent: InfobarContent = {
   title: 'Billing',
   sections: [
     {
-      title: 'Polar billing posture',
+      title: 'Free plan posture',
       description:
-        'Polar manages checkout, subscriptions, customer portal sessions, seats, included usage, and workspace spend caps.',
+        'Diffmint currently keeps workspaces on the free plan. Polar remains optional until you intentionally introduce paid billing later.',
       links: [
         link('Billing with Polar', '/docs/admin/billing-with-polar'),
         link('Privacy and Redaction', '/docs/security/privacy-and-redaction')

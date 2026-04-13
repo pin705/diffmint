@@ -29,7 +29,7 @@ export default async function BillingPage() {
     <PageContainer
       infoContent={billingInfoContent}
       pageTitle='Billing & Quota'
-      pageDescription='Manage Polar plans, workspace seats, included credits, and customer portal access.'
+      pageDescription='Track the workspace free plan, quotas, and future billing readiness.'
     >
       <BillingPageContent summary={summary} />
     </PageContainer>

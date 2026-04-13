@@ -52,12 +52,9 @@ describe('polar billing integration helpers', () => {
     });
 
     expect(summary.provider).toBe('polar');
-    expect(summary.planKey).toBe('team');
-    expect(summary.checkoutTargets).toHaveLength(3);
-    expect(summary.checkoutTargets.find((target) => target.planKey === 'team')?.recommended).toBe(
-      true
-    );
-    expect(summary.checkoutTargets.every((target) => target.checkoutUrl)).toBe(true);
-    expect(summary.portalUrl).toContain('/api/polar/portal');
+    expect(summary.planKey).toBe('free');
+    expect(summary.checkoutTargets).toHaveLength(0);
+    expect(summary.portalUrl).toBeUndefined();
+    expect(summary.notes[0]).toContain('free plan');
   });
 });

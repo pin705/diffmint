@@ -81,7 +81,7 @@ async function createDatabaseCheck(env: NodeJS.ProcessEnv): Promise<RuntimeHealt
       status: isPersistenceRequired(env) ? 'fail' : 'warn',
       detail: isPersistenceRequired(env)
         ? getPersistenceRequirementMessage()
-        : 'DATABASE_URL is not active. The control plane will use the in-memory fallback.'
+        : 'DATABASE_URL is not active. Control-plane data will stay ephemeral until persistence is configured.'
     };
   }
 
@@ -140,8 +140,8 @@ function createBillingCheck(env: NodeJS.ProcessEnv): RuntimeHealthCheck {
 
   return {
     name: 'billing',
-    status: 'warn',
-    detail: 'Polar billing is not fully configured yet. Billing pages will stay in a guarded state.'
+    status: 'ok',
+    detail: 'Free-plan billing mode is active. Polar is optional until paid billing is enabled.'
   };
 }
 

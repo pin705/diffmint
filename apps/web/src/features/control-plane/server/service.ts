@@ -243,7 +243,7 @@ function normalizePlanKey(value?: string | null): BillingPlanKey {
     return value;
   }
 
-  return 'team';
+  return 'free';
 }
 
 function buildPolarWebhookDeliveryKey(payload: PolarWebhookPayload): string | null {
@@ -330,29 +330,37 @@ function buildOverviewStats(
   policies: PolicyBundle[],
   billing: BillingWorkspaceSnapshot
 ): OverviewStat[] {
+  const quotaPercent =
+    billing.creditsIncluded > 0
+      ? `${calculateQuotaRemainingPercent(billing.creditsRemaining, billing.creditsIncluded)}%`
+      : '0%';
+
   return [
     {
       label: 'Synced reviews',
       value: String(reviews.length),
-      helper: `${reviews.filter((review) => review.commandSource === 'cli').length} from CLI`
+      helper:
+        reviews.length > 0
+          ? `${reviews.filter((review) => review.commandSource === 'cli').length} from CLI`
+          : 'No synced reviews yet'
     },
     {
       label: 'Active seats',
       value: `${billing.seatsUsed} / ${billing.seatLimit}`,
-      helper: `${Math.max(billing.seatLimit - billing.seatsUsed, 0)} seats remaining`
+      helper:
+        billing.planKey === 'free'
+          ? 'Free workspace'
+          : `${Math.max(billing.seatLimit - billing.seatsUsed, 0)} seats remaining`
     },
     {
       label: 'Published policies',
       value: String(policies.length),
-      helper: `${policies[0]?.version ?? 'N/A'} is active`
+      helper: policies[0]?.version ? `${policies[0].version} is active` : 'No published policy yet'
     },
     {
       label: 'Quota remaining',
-      value: `${calculateQuotaRemainingPercent(
-        billing.creditsRemaining,
-        billing.creditsIncluded
-      )}%`,
-      helper: 'Managed provider credits'
+      value: quotaPercent,
+      helper: billing.creditsIncluded > 0 ? 'Managed provider credits' : 'No managed quota assigned'
     }
   ];
 }
@@ -796,96 +804,6 @@ async function ensureStaticSeed(
         workspaceExternalId: workspaceSeed.id
       }
     });
-  }
-
-  const existingReleases = await db.select().from(releaseChannelsTable);
-  if (existingReleases.length === 0) {
-    await db.insert(releaseChannelsTable).values(
-      seededReleaseManifests.map((release) => ({
-        channel: release.channel,
-        version: release.version,
-        cliManifest: release.cli,
-        vscodeManifest: release.vscode,
-        notesUrl: release.notesUrl ?? null,
-        releasedAt: new Date(release.releasedAt)
-      }))
-    );
-  }
-
-  const existingReviews = await db
-    .select()
-    .from(reviewSessionsTable)
-    .where(eq(reviewSessionsTable.workspaceId, workspaceRow.id))
-    .limit(1);
-
-  if (existingReviews.length === 0) {
-    await db.insert(reviewSessionsTable).values(
-      seededReviewSessions.map((session) => ({
-        workspaceId: workspaceRow.id,
-        requestId: session.requestId,
-        traceId: session.traceId,
-        source: session.source,
-        commandSource: session.commandSource,
-        provider: session.provider ?? null,
-        model: session.model ?? null,
-        policyVersionId: null,
-        status: session.status,
-        summary: session.summary,
-        severityCounts: session.severityCounts,
-        durationMs: session.durationMs,
-        startedAt: new Date(session.startedAt),
-        completedAt: session.completedAt ? new Date(session.completedAt) : null,
-        metadata: {
-          findings: session.findings,
-          artifacts: session.artifacts,
-          workspaceExternalId: workspaceSeed.id,
-          policyVersionId: session.policyVersionId
-        }
-      }))
-    );
-  }
-
-  const existingUsage = await db
-    .select()
-    .from(usageEventsTable)
-    .where(eq(usageEventsTable.workspaceId, workspaceRow.id))
-    .limit(1);
-
-  if (existingUsage.length === 0) {
-    await db.insert(usageEventsTable).values(
-      seededUsageEvents.map((event) => ({
-        workspaceId: workspaceRow.id,
-        actorId: event.actorId ?? null,
-        source: event.source,
-        event: event.event,
-        creditsDelta: event.creditsDelta ?? null,
-        metadata: event.metadata ?? null,
-        createdAt: new Date(event.createdAt)
-      }))
-    );
-  }
-
-  const existingAudit = await db
-    .select()
-    .from(auditEventsTable)
-    .where(eq(auditEventsTable.workspaceId, workspaceRow.id))
-    .limit(1);
-
-  if (existingAudit.length === 0) {
-    await db.insert(auditEventsTable).values(
-      seededAuditEvents.map((event) => ({
-        workspaceId: workspaceRow.id,
-        actorId: event.actor,
-        event: event.event,
-        targetType: 'control_plane',
-        targetId: event.target,
-        detail: event.detail,
-        metadata: {
-          targetLabel: event.target,
-          when: event.when
-        }
-      }))
-    );
   }
 }
 

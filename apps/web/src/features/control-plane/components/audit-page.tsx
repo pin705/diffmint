@@ -23,28 +23,36 @@ export function AuditPageContent({ auditEvents }: AuditPageContentProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Event</TableHead>
-              <TableHead>Actor</TableHead>
-              <TableHead>Target</TableHead>
-              <TableHead>When</TableHead>
-              <TableHead>Detail</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {auditEvents.map((event) => (
-              <TableRow key={event.id}>
-                <TableCell className='font-medium'>{event.event}</TableCell>
-                <TableCell>{event.actor}</TableCell>
-                <TableCell>{event.target}</TableCell>
-                <TableCell>{event.when}</TableCell>
-                <TableCell className='max-w-md whitespace-normal text-sm'>{event.detail}</TableCell>
+        {auditEvents.length === 0 ? (
+          <div className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'>
+            No audit events have been recorded for this workspace yet.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Event</TableHead>
+                <TableHead>Actor</TableHead>
+                <TableHead>Target</TableHead>
+                <TableHead>When</TableHead>
+                <TableHead>Detail</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {auditEvents.map((event) => (
+                <TableRow key={event.id}>
+                  <TableCell className='font-medium'>{event.event}</TableCell>
+                  <TableCell>{event.actor}</TableCell>
+                  <TableCell>{event.target}</TableCell>
+                  <TableCell>{event.when}</TableCell>
+                  <TableCell className='max-w-md whitespace-normal text-sm'>
+                    {event.detail}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );

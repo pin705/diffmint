@@ -19,40 +19,48 @@ export function PoliciesPageContent({ policyBundles }: PoliciesPageContentProps)
 
   return (
     <div className='space-y-6'>
-      <Card>
-        <CardHeader>
-          <CardTitle>Active policy version</CardTitle>
-          <CardDescription>{activePolicy.summary}</CardDescription>
-        </CardHeader>
-        <CardContent className='grid gap-4 lg:grid-cols-2'>
-          <div className='space-y-3'>
-            <p className='text-sm font-medium'>Checklist</p>
-            {activePolicy.checklist.map((item) => (
-              <div key={item.id} className='rounded-2xl border px-4 py-3'>
-                <div className='flex items-center justify-between gap-2'>
-                  <p className='font-medium'>{item.title}</p>
-                  <Badge variant={item.required ? 'default' : 'outline'}>
-                    {item.required ? 'Required' : 'Optional'}
-                  </Badge>
+      {!activePolicy ? (
+        <Card>
+          <CardContent className='text-muted-foreground px-6 py-6 text-sm'>
+            No policy has been published for this workspace yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Active policy version</CardTitle>
+            <CardDescription>{activePolicy.summary}</CardDescription>
+          </CardHeader>
+          <CardContent className='grid gap-4 lg:grid-cols-2'>
+            <div className='space-y-3'>
+              <p className='text-sm font-medium'>Checklist</p>
+              {activePolicy.checklist.map((item) => (
+                <div key={item.id} className='rounded-2xl border px-4 py-3'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <p className='font-medium'>{item.title}</p>
+                    <Badge variant={item.required ? 'default' : 'outline'}>
+                      {item.required ? 'Required' : 'Optional'}
+                    </Badge>
+                  </div>
+                  <p className='text-muted-foreground mt-1 text-sm'>{item.guidance}</p>
                 </div>
-                <p className='text-muted-foreground mt-1 text-sm'>{item.guidance}</p>
-              </div>
-            ))}
-          </div>
-          <div className='space-y-3'>
-            <p className='text-sm font-medium'>Rules</p>
-            {activePolicy.rules.map((rule) => (
-              <div key={rule.id} className='rounded-2xl border px-4 py-3'>
-                <div className='flex items-center justify-between gap-2'>
-                  <p className='font-medium'>{rule.title}</p>
-                  <Badge variant='outline'>{rule.severity}</Badge>
+              ))}
+            </div>
+            <div className='space-y-3'>
+              <p className='text-sm font-medium'>Rules</p>
+              {activePolicy.rules.map((rule) => (
+                <div key={rule.id} className='rounded-2xl border px-4 py-3'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <p className='font-medium'>{rule.title}</p>
+                    <Badge variant='outline'>{rule.severity}</Badge>
+                  </div>
+                  <p className='text-muted-foreground mt-1 text-sm'>{rule.guidance}</p>
                 </div>
-                <p className='text-muted-foreground mt-1 text-sm'>{rule.guidance}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -62,26 +70,32 @@ export function PoliciesPageContent({ policyBundles }: PoliciesPageContentProps)
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Version</TableHead>
-                <TableHead>Published</TableHead>
-                <TableHead>Checksum</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {policyBundles.map((policy) => (
-                <TableRow key={policy.policyVersionId}>
-                  <TableCell>{policy.name}</TableCell>
-                  <TableCell>{policy.version}</TableCell>
-                  <TableCell>{policy.publishedAt.slice(0, 10)}</TableCell>
-                  <TableCell>{policy.checksum}</TableCell>
+          {policyBundles.length === 0 ? (
+            <div className='text-muted-foreground rounded-2xl border px-4 py-3 text-sm'>
+              Published policy versions will appear here after the first policy rollout.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Published</TableHead>
+                  <TableHead>Checksum</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {policyBundles.map((policy) => (
+                  <TableRow key={policy.policyVersionId}>
+                    <TableCell>{policy.name}</TableCell>
+                    <TableCell>{policy.version}</TableCell>
+                    <TableCell>{policy.publishedAt.slice(0, 10)}</TableCell>
+                    <TableCell>{policy.checksum}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
