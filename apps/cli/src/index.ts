@@ -280,7 +280,7 @@ function hasFlag(args: string[], flag: string): boolean {
 }
 
 function getApiBaseUrl(config: LocalConfig): string {
-  return config.apiBaseUrl ?? process.env.DIFFMINT_API_BASE_URL ?? 'https://diffmint.io';
+  return config.apiBaseUrl ?? process.env.DIFFMINT_API_BASE_URL ?? 'https://diffmint.deplio.app';
 }
 
 async function readJson<T>(response: Response): Promise<T> {

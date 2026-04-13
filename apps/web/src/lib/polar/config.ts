@@ -28,7 +28,7 @@ export function getPolarConfig(): PolarConfig {
     process.env.DIFFMINT_APP_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
-    'https://diffmint.io';
+    'https://diffmint.deplio.app';
 
   return {
     accessToken: process.env.POLAR_ACCESS_TOKEN,

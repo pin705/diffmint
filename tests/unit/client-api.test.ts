@@ -478,7 +478,7 @@ describe('client api routes', () => {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'x-forwarded-host': 'diffmint.io',
+          'x-forwarded-host': 'diffmint.deplio.app',
           'x-forwarded-proto': 'https'
         },
         body: JSON.stringify({
@@ -491,9 +491,9 @@ describe('client api routes', () => {
       verificationUriComplete: string;
     };
 
-    expect(payload.verificationUri).toBe('https://diffmint.io/auth/device');
+    expect(payload.verificationUri).toBe('https://diffmint.deplio.app/auth/device');
     expect(payload.verificationUriComplete).toContain(
-      'https://diffmint.io/auth/device?device_code='
+      'https://diffmint.deplio.app/auth/device?device_code='
     );
   });
 

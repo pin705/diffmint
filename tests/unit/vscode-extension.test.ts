@@ -32,9 +32,9 @@ describe('vscode extension helpers', () => {
   });
 
   it('normalizes web base URLs and builds dashboard links', () => {
-    expect(normalizeWebBaseUrl('https://diffmint.io/')).toBe('https://diffmint.io');
-    expect(buildWebUrl('https://diffmint.io/', '/dashboard/policies')).toBe(
-      'https://diffmint.io/dashboard/policies'
+    expect(normalizeWebBaseUrl('https://diffmint.deplio.app/')).toBe('https://diffmint.deplio.app');
+    expect(buildWebUrl('https://diffmint.deplio.app/', '/dashboard/policies')).toBe(
+      'https://diffmint.deplio.app/dashboard/policies'
     );
   });
 

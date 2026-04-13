@@ -191,7 +191,7 @@
         },
         "diffmint.webBaseUrl": {
           "type": "string",
-          "default": "https://diffmint.io",
+          "default": "https://diffmint.deplio.app",
           "description": "Base URL for the Diffmint web control plane."
         }
       }

@@ -138,7 +138,7 @@ function getAppUrl(): string {
     process.env.DIFFMINT_APP_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
-    'https://diffmint.io'
+    'https://diffmint.deplio.app'
   );
 }
 

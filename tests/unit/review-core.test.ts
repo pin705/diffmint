@@ -36,7 +36,7 @@ function createRepoWithChangedFile(filePath = 'src/auth/route.ts'): {
   const absoluteFilePath = path.join(repoDir, filePath);
 
   runGit(repoDir, ['init']);
-  runGit(repoDir, ['config', 'user.email', 'team@diffmint.io']);
+  runGit(repoDir, ['config', 'user.email', 'team@diffmint.deplio.app']);
   runGit(repoDir, ['config', 'user.name', 'Diffmint Tests']);
 
   mkdirSync(path.dirname(absoluteFilePath), { recursive: true });
@@ -146,7 +146,7 @@ describe('review core', () => {
     const filePath = 'packages/docs-content/content/cli/reference.mdx';
 
     runGit(repoDir, ['init']);
-    runGit(repoDir, ['config', 'user.email', 'team@diffmint.io']);
+    runGit(repoDir, ['config', 'user.email', 'team@diffmint.deplio.app']);
     runGit(repoDir, ['config', 'user.name', 'Diffmint Tests']);
 
     writeFileSync(path.join(repoDir, 'README.md'), '# Diffmint\n', 'utf8');

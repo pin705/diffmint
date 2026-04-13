@@ -5,7 +5,7 @@ Diffmint is a local-first, policy-driven code review product.
 - Primary experience: CLI and VS Code extension
 - Web role: control plane for workspaces, providers, Polar billing, policies, history, audit, and docs
 - Package manager: `pnpm`
-- Production domain: [diffmint.io](https://diffmint.io)
+- Production domain: [diffmint.deplio.app](https://diffmint.deplio.app)
 - Local dev stack: `Docker Compose` with hot reload and Postgres
 
 ## Monorepo

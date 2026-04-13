@@ -63,7 +63,7 @@ export function getDiffmintPaths(env: NodeJS.ProcessEnv = process.env): {
 }
 
 export function normalizeWebBaseUrl(value?: string): string {
-  const candidate = value?.trim() || 'https://diffmint.io';
+  const candidate = value?.trim() || 'https://diffmint.deplio.app';
   return candidate.endsWith('/') ? candidate.slice(0, -1) : candidate;
 }
 

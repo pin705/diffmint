@@ -1,8 +1,8 @@
 export const siteConfig = {
   name: 'Diffmint',
   shortName: 'Diffmint',
-  domain: 'diffmint.io',
-  url: process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://diffmint.io',
+  domain: 'diffmint.deplio.app',
+  url: process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://diffmint.deplio.app',
   description:
     'Diffmint is the local-first, policy-driven code review platform for engineering teams that live in the CLI and VS Code.',
   headline: 'Review local diffs with policy, history, provider control, and audit built in.',

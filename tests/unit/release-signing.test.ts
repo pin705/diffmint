@@ -11,15 +11,15 @@ const baseManifest = {
   releasedAt: '2026-04-12T00:00:00.000Z',
   cli: {
     version: '0.1.0',
-    downloadUrl: 'https://diffmint.io/downloads/dm',
+    downloadUrl: 'https://diffmint.deplio.app/downloads/dm',
     checksum: 'sha256-cli'
   },
   vscode: {
     version: '0.1.0',
-    marketplaceUrl: 'https://diffmint.io/downloads/vscode',
+    marketplaceUrl: 'https://diffmint.deplio.app/downloads/vscode',
     checksum: 'sha256-vscode'
   },
-  notesUrl: 'https://diffmint.io/docs/changelog/2026-04-foundation'
+  notesUrl: 'https://diffmint.deplio.app/docs/changelog/2026-04-foundation'
 } as const;
 
 describe('release manifest signing', () => {
